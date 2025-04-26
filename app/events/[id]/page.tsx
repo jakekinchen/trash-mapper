@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Event, EventAttendee } from '@/types'
 import { getEvent, getEventAttendees, registerForEvent, unregisterFromEvent, isUserRegistered } from '@/lib/events'
@@ -25,17 +25,7 @@ export default function EventPage({ params }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUserId(session.user.id)
-        checkAttendance(session.user.id)
-      }
-      loadEventData()
-    })
-  }, [])
-
-  async function loadEventData() {
+  const loadEventData = useCallback(async () => {
     try {
       const eventData = await getEvent(params.id)
       setEvent(eventData)
@@ -51,16 +41,26 @@ export default function EventPage({ params }: Props) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, toast])
 
-  async function checkAttendance(currentUserId: string) {
+  const checkAttendance = useCallback(async (currentUserId: string) => {
     try {
       const attending = await isUserRegistered(params.id, currentUserId)
       setIsAttending(attending)
     } catch (error) {
       console.error('Error checking attendance:', error)
     }
-  }
+  }, [params.id])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUserId(session.user.id)
+        checkAttendance(session.user.id)
+      }
+      loadEventData()
+    })
+  }, [checkAttendance, loadEventData])
 
   async function handleAttendance() {
     if (!userId) {

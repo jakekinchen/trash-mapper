@@ -49,6 +49,7 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "^0.4.4",
+    "openai": "^4.96.0",
     "react": "^19",
     "react-day-picker": "^9.6.7",
     "react-dom": "^19",
@@ -59,7 +60,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "zod": "^3.24.1"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.17",

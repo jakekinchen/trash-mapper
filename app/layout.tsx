@@ -8,9 +8,6 @@ import { Navbar } from "@/components/navbar"
 import { FloatingButtons } from "@/components/floating-buttons"
 import { DrawerProvider } from '@/lib/drawer-context'
 
-import { supabase } from '@/lib/supabaseClient'
-import { User } from '@supabase/supabase-js'
-
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {

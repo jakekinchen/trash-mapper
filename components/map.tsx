@@ -34,12 +34,18 @@ interface SimpleHeatOptions {
   minOpacity?: number; // Added based on potential usage elsewhere or defaults
 }
 
+interface LeafletWithHeat extends L.Map {
+  heatLayer: (data: LatLngTuple[], options: SimpleHeatOptions) => L.Layer;
+}
+
 export default function MapComponent() {
   const { toast } = useToast()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [trashBins, setTrashBins] = useState<TrashBin[]>([])
   const [pollutionData, setPollutionData] = useState<PollutionReport[]>([])
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false)
+  const [isSubmissionSuccess, setIsSubmissionSuccess] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
@@ -432,7 +438,8 @@ export default function MapComponent() {
           map?.removeLayer(heatLayerRef.current)
         }
 
-        if ((window.L as any).heatLayer) {
+        const leafletWithHeat = window.L as unknown as LeafletWithHeat;
+        if (leafletWithHeat.heatLayer) {
           // Make sure each report has valid location data
           const validReports = pollutionData.filter(
             (report: PollutionReport) => report && report.location && report.location.length === 2,
@@ -458,7 +465,7 @@ export default function MapComponent() {
               },
             };
             // Keep cast for the method call
-            const heatLayer = (window.L as any).heatLayer(heatData, heatLayerOptions) as L.Layer
+            const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer
 
             heatLayer.addTo(map)
             heatLayerRef.current = heatLayer
@@ -472,43 +479,74 @@ export default function MapComponent() {
     }
   }, [mapLoaded, pollutionData])
 
-  const handleReportSubmit = (data: ReportSubmitData) => {
+  const handleReportSubmit = async (data: ReportSubmitData) => {
+    const reportLocation = userLocation || [-97.7431, 30.2672]; 
+    const [longitude, latitude] = reportLocation;
+
+    const formData = new FormData();
+    formData.append('latitude', latitude.toString());
+    formData.append('longitude', longitude.toString());
+    formData.append('severity', data.severity.toString());
+    
+    if (data.imageFile) {
+      formData.append('image', data.imageFile);
+    } else {
+      toast({ title: "Error", description: "No image selected.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setIsSubmissionSuccess(false); // Reset success state initially
     try {
-      // In a real app, this would send data to your backend
-      console.log("Report submitted:", data)
+      const response = await fetch('/api/reports/create', {
+        method: 'POST',
+        body: formData, 
+      });
 
-      // Add the new report to our local state
-      const reportLocation = userLocation || [-97.7431, 30.2672] // Use default Austin coordinates if no location
+      const result = await response.json();
 
-      // Create the new report object (matches ReportSubmitData structure from modal)
-      const newReport: PollutionReport = {
-        id: `user-${Date.now()}`,
-        location: reportLocation,
-        type: "user",
-        severity: data.severity,
-        description: data.description,
-        // ImageUrl can be string | null from ReportSubmitData, assign directly
-        imageUrl: data.imageUrl || undefined, // Ensure undefined if null/falsy and PollutionReport expects string | undefined
-        timestamp: data.timestamp,
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit report');
       }
 
-      setPollutionData((prev: PollutionReport[]) => [...prev, newReport])
+      // --- Success Path --- 
+      setIsSubmissionSuccess(true); // Set success state immediately after successful upload
+
+      const newReport: PollutionReport = {
+        id: result.reportId,
+        location: reportLocation,
+        type: "user",
+        severity: data.severity, // Use user's severity initially
+        description: data.description, 
+        imageUrl: result.imageUrl,
+        timestamp: new Date().toISOString(), 
+      };
+      setPollutionData((prev: PollutionReport[]) => [...prev, newReport]);
 
       toast({
-        title: "Report Submitted",
-        description: "Thank you for helping keep our community clean!",
-      })
+        title: "Report Submitted Successfully",
+        description: "Thank you for your report! We'll analyze the severity and update it shortly.", 
+      });
 
-      setIsReportModalOpen(false)
+      // Delay closing the modal to show success state
+      setTimeout(() => {
+          setIsReportModalOpen(false);
+          setIsSubmissionSuccess(false); // Reset success state after closing
+      }, 1500); // Close after 1.5 seconds
+
     } catch (error) {
-      console.error("Error submitting report:", error)
+      console.error("Error submitting report:", error);
+      setIsSubmissionSuccess(false); // Ensure success state is false on error
       toast({
         title: "Error",
-        description: "Failed to submit report. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit report. Please try again.",
         variant: "destructive",
-      })
+      });
+    } finally {
+      // Reset submitting state slightly earlier than modal close for smoother transition
+      setTimeout(() => setIsSubmittingReport(false), 1000);
     }
-  }
+  };
 
   // Add event listener for custom openReportModal event
   useEffect(() => {
@@ -539,6 +577,8 @@ export default function MapComponent() {
         onClose={() => setIsReportModalOpen(false)}
         onSubmit={handleReportSubmit}
         userLocation={userLocation}
+        isSubmitting={isSubmittingReport}
+        isSuccess={isSubmissionSuccess}
       />
 
       {/* Leaflet scripts */}

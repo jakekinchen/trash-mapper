@@ -9,28 +9,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
-import { Camera, Upload, X } from "lucide-react"
+import { Camera, Upload, X, Check, Loader2 } from "lucide-react"
 
 // Define AND EXPORT a more specific type for the submitted data
 export interface ReportSubmitData {
   location: [number, number];
   description?: string;
   severity: number;
-  imageUrl?: string | null; // Allow null
-  timestamp: string;
+  imageFile: File | null;
 }
 
 interface ReportModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: ReportSubmitData) => void // Use the specific type here
+  onSubmit: (data: ReportSubmitData) => void
   userLocation: [number, number] | null
+  isSubmitting?: boolean;
+  isSuccess?: boolean;
 }
 
-export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }: ReportModalProps) {
+export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, isSubmitting, isSuccess }: ReportModalProps) {
   const [image, setImage] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [description, setDescription] = useState("")
-  const [severity, setSeverity] = useState([5]) // 1-10 scale
+  const [severity, setSeverity] = useState([3]) // 1-5 scale
   const [isCapturing, setIsCapturing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -65,7 +67,15 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
           context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
           const imageDataUrl = canvas.toDataURL("image/jpeg")
-          setImage(imageDataUrl)
+          setImage(imageDataUrl) // Set preview
+
+          // Convert canvas to blob then to file
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const capturedFile = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+              setImageFile(capturedFile); // Set the file object
+            }
+          }, 'image/jpeg');
 
           // Stop the camera stream
           const stream = video.srcObject as MediaStream
@@ -86,10 +96,11 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
     try {
       const file = e.target.files?.[0]
       if (file) {
+        setImageFile(file); // Store the file object
         const reader = new FileReader()
         reader.onload = (event) => {
           if (event.target?.result) {
-            setImage(event.target.result as string)
+            setImage(event.target.result as string) // Set preview
           }
         }
         reader.onerror = () => {
@@ -104,20 +115,24 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
 
   const handleSubmit = () => {
     try {
-      // Allow submission even without precise location
-      const submitData: ReportSubmitData = { // Ensure the object matches the type
-        location: userLocation || [-97.7431, 30.2672], // Use default Austin coordinates if no location
+      if (!imageFile) {
+        alert("Please select or capture an image.");
+        return;
+      }
+      
+      const submitData: ReportSubmitData = {
+        location: userLocation || [-97.7431, 30.2672],
         description,
-        severity: severity && severity.length > 0 ? severity[0] : 5,
-        imageUrl: image,
-        timestamp: new Date().toISOString(),
+        severity: severity[0],
+        imageFile: imageFile,
       };
       onSubmit(submitData)
 
       // Reset form
       setImage(null)
+      setImageFile(null)
       setDescription("")
-      setSeverity([5])
+      setSeverity([3])
       setIsCapturing(false)
     } catch (error) {
       console.error("Error submitting form:", error)
@@ -212,11 +227,22 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
           </div>
 
           <div className="grid gap-2">
-            <Label>Severity (1-10)</Label>
-            <Slider value={severity} min={1} max={10} step={1} onValueChange={setSeverity} />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Minor</span>
-              <span>Severe</span>
+            <Label htmlFor="severity">Severity (1-5)</Label>
+            <Slider
+              id="severity"
+              max={5}
+              min={1}
+              step={1}
+              value={severity}
+              onValueChange={setSeverity}
+              className="w-full"
+            />
+            <div className="text-sm text-muted-foreground text-center">
+              {severity[0] === 1 && "Minor - Small amount of litter"}
+              {severity[0] === 2 && "Low - Scattered litter"}
+              {severity[0] === 3 && "Medium - Noticeable accumulation"}
+              {severity[0] === 4 && "High - Significant pollution"}
+              {severity[0] === 5 && "Severe - Hazardous/Large-scale"}
             </div>
           </div>
 
@@ -232,11 +258,26 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="touch-target">
+          <Button 
+            variant="outline" 
+            onClick={handleClose} 
+            className="touch-target" 
+            disabled={isSubmitting || isSuccess} // Disable cancel during/after success briefly
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!description} className="touch-target">
-            Submit Report
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!imageFile || isSubmitting || isSuccess} // Disable submit during/after success
+            className={`touch-target ${isSuccess ? 'bg-green-600 hover:bg-green-700' : ''}`}
+          >
+            {isSubmitting ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+            ) : isSuccess ? (
+              <><Check className="mr-2 h-4 w-4" /> Submitted!</>
+            ) : (
+              'Submit Report'
+            )}
           </Button>
         </DialogFooter>
 

@@ -8,9 +8,6 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-// Remove unused import type for ActionTypesValue
-// import type { actionTypes as ActionTypesValue } from "./use-toast"
-
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
@@ -21,13 +18,6 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const
-
 let count = 0
 
 function genId() {
@@ -35,26 +25,21 @@ function genId() {
   return count.toString()
 }
 
-// Ensure eslint-disable is directly above the line causing the error (line 40)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-// The following line might be the source of the error if ActionType isn't actually used as a value
-type ActionType = typeof actionTypes
-
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
+      type: "ADD_TOAST"
       toast: ToasterToast
     }
   | {
-      type: ActionType["UPDATE_TOAST"]
+      type: "UPDATE_TOAST"
       toast: Partial<ToasterToast>
     }
   | {
-      type: ActionType["DISMISS_TOAST"]
+      type: "DISMISS_TOAST"
       toastId?: ToasterToast["id"]
     }
   | {
-      type: ActionType["REMOVE_TOAST"]
+      type: "REMOVE_TOAST"
       toastId?: ToasterToast["id"]
     }
 

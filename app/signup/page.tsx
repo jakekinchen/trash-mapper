@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,6 @@ export default function SignUpPage() {
   const [password, setPassword] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const router = useRouter()
   const { toast } = useToast()
 
   const handleSignUp = async (e: FormEvent<HTMLFormElement>) => {

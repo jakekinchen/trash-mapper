@@ -1,10 +1,57 @@
 import { supabase } from './supabaseClient'
 import { Event, EventAttendee } from '@/types'
 
+// Define a type for the joined event data
+interface EventWithAttendees extends Event {
+  event_attendees: EventAttendee[];
+}
+
 export async function getEvents() {
   const { data, error } = await supabase
     .from('events')
     .select('*')
+    .order('start_time', { ascending: true })
+
+  if (error) throw error
+  return data as Event[]
+}
+
+export async function getMyCreatedEvents() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('organizer_id', user.id)
+    .order('start_time', { ascending: true })
+
+  if (error) throw error
+  return data as Event[]
+}
+
+export async function getMyJoinedEvents() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*, event_attendees!inner(*)')
+    .eq('event_attendees.user_id', user.id)
+    .order('start_time', { ascending: true })
+
+  if (error) throw error
+  return (data as EventWithAttendees[]).map(event => ({
+    ...event,
+    event_attendees: undefined // Remove the join data from the event object
+  })) as Event[]
+}
+
+export async function getPublicEvents() {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('is_public', true)
     .order('start_time', { ascending: true })
 
   if (error) throw error
