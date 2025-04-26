@@ -7,6 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/navbar"
 import { FloatingButtons } from "@/components/floating-buttons"
 
+import { supabase } from '@/lib/supabaseClient'
+import { User } from '@supabase/supabase-js'
+
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {

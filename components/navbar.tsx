@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
 import { TrashIcon } from './trash-icon'
+import { Button } from "@/components/ui/button"
+import { Menu } from 'lucide-react'
 
 export function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -33,6 +35,7 @@ export function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
+    router.refresh()
   }
 
   return (
@@ -44,19 +47,13 @@ export function Navbar() {
           </div>
           <span className="text-xl font-bold tracking-wide">Trash Mapper ATX</span>
         </Link>
-        <div className="flex space-x-4">
+        <div className="flex items-center space-x-4">
           {loading ? (
-            <span className="text-sm">Loading...</span>
+            <span className="text-sm animate-pulse">...</span>
           ) : user ? (
-            <>
-              <span className="text-sm hidden sm:inline">{user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="text-sm font-medium hover:underline"
-              >
-                Logout
-              </button>
-            </>
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="h-6 w-6" />
+            </Button>
           ) : (
             <>
               <Link
