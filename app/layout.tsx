@@ -6,6 +6,7 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/navbar"
 import { FloatingButtons } from "@/components/floating-buttons"
+import { DrawerProvider } from '@/lib/drawer-context'
 
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
@@ -40,11 +41,13 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
-          <Navbar />
-          <main className="page-transition">
-            {children}
-          </main>
-          <FloatingButtons />
+          <DrawerProvider>
+            <Navbar />
+            <main className="page-transition">
+              {children}
+            </main>
+            <FloatingButtons />
+          </DrawerProvider>
         </ThemeProvider>
       </body>
     </html>

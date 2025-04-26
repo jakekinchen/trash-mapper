@@ -20,6 +20,10 @@ const config = {
     },
     extend: {
       colors: {
+        sage: {
+          light: "#94A187",  // Light sage color
+          DEFAULT: "#7C8B70", // Darker sage color
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
