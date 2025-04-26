@@ -459,7 +459,7 @@ export default function MapComponent() {
     }
   }, [mapLoaded, pollutionData])
 
-  const handleReportSubmit = (data) => {
+  const handleReportSubmit = (data: any) => {
     try {
       // In a real app, this would send data to your backend
       console.log("Report submitted:", data)
@@ -495,70 +495,29 @@ export default function MapComponent() {
     }
   }
 
+  // Add event listener for custom openReportModal event
+  useEffect(() => {
+    const mapComponent = document.getElementById('map-component')
+    
+    const handleOpenReportModal = () => {
+      setIsReportModalOpen(true)
+    }
+    
+    if (mapComponent) {
+      mapComponent.addEventListener('openReportModal', handleOpenReportModal)
+    }
+    
+    return () => {
+      if (mapComponent) {
+        mapComponent.removeEventListener('openReportModal', handleOpenReportModal)
+      }
+    }
+  }, [])
+
   return (
-    <>
-      {/* Load Leaflet scripts */}
-      <Script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        onLoad={() => {
-          try {
-            // Load Leaflet.heat after Leaflet is loaded
-            const heatScript = document.createElement("script")
-            heatScript.src = "https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
-            heatScript.onload = () => setMapLoaded(true)
-            heatScript.onerror = () => {
-              console.error("Failed to load heat map script")
-              // Still set mapLoaded to true so the basic map works
-              setMapLoaded(true)
-            }
-            document.body.appendChild(heatScript)
-          } catch (error) {
-            console.error("Error loading scripts:", error)
-            // Still set mapLoaded to true so we can show an error message
-            setMapLoaded(true)
-          }
-        }}
-        onError={() => {
-          console.error("Failed to load Leaflet script")
-          toast({
-            title: "Error",
-            description: "Failed to load map resources. Please check your connection and try again.",
-            variant: "destructive",
-          })
-        }}
-      />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-      {/* Map container */}
-      <div ref={mapRef} className="w-full h-full z-0"></div>
-
-      {/* Floating action buttons */}
-      <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-10 floating-action-buttons">
-        <Button
-          size="icon"
-          className="h-12 w-12 rounded-full bg-green-600 hover:bg-green-700 shadow-lg floating-action-button touch-target"
-          onClick={() => setIsReportModalOpen(true)}
-        >
-          <Camera className="h-6 w-6" />
-          <span className="sr-only">Report Pollution</span>
-        </Button>
-
-        <Button
-          size="icon"
-          className="h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg floating-action-button touch-target"
-          onClick={() => {
-            // This would navigate to the events page in a real app
-            toast({
-              title: "Coming Soon",
-              description: "Cleanup events feature is under development",
-            })
-          }}
-        >
-          <Calendar className="h-6 w-6" />
-          <span className="sr-only">Cleanup Events</span>
-        </Button>
-      </div>
-
+    <div className="relative w-full h-full" id="map-component">
+      <div ref={mapRef} className="w-full h-full z-0" />
+      
       {/* Report modal */}
       <ReportModal
         isOpen={isReportModalOpen}
@@ -566,6 +525,15 @@ export default function MapComponent() {
         onSubmit={handleReportSubmit}
         userLocation={userLocation}
       />
-    </>
+
+      {/* Leaflet scripts */}
+      <Script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossOrigin=""
+        onLoad={() => setMapLoaded(true)}
+      />
+      <Script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" onLoad={() => {}} />
+    </div>
   )
 }

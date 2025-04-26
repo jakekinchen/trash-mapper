@@ -1,0 +1,68 @@
+/* Custom styles for Trash Mapper ATX */
+
+/* Styling for the trash icon in the navbar */
+.trash-icon {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  transition: transform 0.2s ease;
+}
+
+.trash-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Custom gradient for backgrounds */
+.sage-gradient {
+  background: linear-gradient(135deg, #8FBC8F 0%, #6B8E6B 100%);
+}
+
+/* Custom button styles */
+.sage-button {
+  background-color: #8FBC8F;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.sage-button:hover {
+  background-color: #6B8E6B;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Floating action buttons */
+@media screen and (max-height: 600px) {
+  /* Adjust positioning for very small height screens */
+  .floating-buttons {
+    bottom: 1rem !important;
+    right: 1rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .floating-button {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+}
+
+/* Fix for iOS safe areas */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .floating-buttons {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Page transitions */
+.page-transition {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+} 

@@ -1,16 +1,25 @@
 import type React from "react"
 import "./globals.css"
-import type { Metadata } from "next"
+import "./custom.css"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Navbar } from "@/components/navbar"
+import { FloatingButtons } from "@/components/floating-buttons"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Pollution Tracker",
-  description: "Track and report pollution in your community",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-    generator: 'v0.dev'
+  title: "Trash Mapper ATX",
+  description: "Track and report trash in your community",
+  generator: 'v0.dev'
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false
 }
 
 export default function RootLayout({
@@ -19,15 +28,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#8FBC8F" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
+          <Navbar />
+          <main className="page-transition">
+            {children}
+          </main>
+          <FloatingButtons />
         </ThemeProvider>
       </body>
     </html>
