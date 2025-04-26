@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Camera, Calendar } from "lucide-react"
-import ReportModal from "./report-modal"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import ReportModal, { type ReportSubmitData } from "./report-modal"
 import Script from "next/script"
+import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 
 // Types for our data
 interface TrashBin {
@@ -26,6 +25,15 @@ interface PollutionReport {
   timestamp: string
 }
 
+// Define a simple interface for the options used by leaflet.heat
+interface SimpleHeatOptions {
+  radius?: number;
+  blur?: number;
+  maxZoom?: number;
+  gradient?: { [key: number]: string };
+  minOpacity?: number; // Added based on potential usage elsewhere or defaults
+}
+
 export default function MapComponent() {
   const { toast } = useToast()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
@@ -34,9 +42,9 @@ export default function MapComponent() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
-  const heatLayerRef = useRef<any>(null)
+  const mapInstanceRef = useRef<LeafletMap | null>(null)
+  const markersRef = useRef<Marker[]>([])
+  const heatLayerRef = useRef<Layer | null>(null)
 
   // Check if running in a mobile device
   const isMobileDevice = () => {
@@ -193,6 +201,25 @@ export default function MapComponent() {
     }
   }, [mapLoaded, toast])
 
+  // Helper function to handle location fallback
+  const handleLocationFallback = useCallback((map: LeafletMap | null, defaultLocation: { latitude: number; longitude: number }) => {
+    try {
+      setUserLocation([defaultLocation.longitude, defaultLocation.latitude])
+
+      if (map && map.setView) {
+        map.setView([defaultLocation.latitude, defaultLocation.longitude], 12)
+      }
+
+      toast({
+        title: "Using Default Location",
+        description: "Using Austin, Texas as the default location.",
+        variant: "warning",
+      })
+    } catch (error) {
+      console.error("Error in location fallback:", error)
+    }
+  }, [toast])
+
   // Get user's location with better error handling
   useEffect(() => {
     if (!mapLoaded || !mapInstanceRef.current || !window.L) return
@@ -250,26 +277,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error in geolocation effect:", error)
     }
-  }, [mapLoaded, toast])
-
-  // Helper function to handle location fallback
-  const handleLocationFallback = (map: any, defaultLocation: { latitude: number; longitude: number }) => {
-    try {
-      setUserLocation([defaultLocation.longitude, defaultLocation.latitude])
-
-      if (map && map.setView) {
-        map.setView([defaultLocation.latitude, defaultLocation.longitude], 12)
-      }
-
-      toast({
-        title: "Using Default Location",
-        description: "Using Austin, Texas as the default location.",
-        variant: "warning",
-      })
-    } catch (error) {
-      console.error("Error in location fallback:", error)
-    }
-  }
+  }, [mapLoaded, toast, handleLocationFallback])
 
   // Add trash bin markers
   useEffect(() => {
@@ -280,14 +288,14 @@ export default function MapComponent() {
 
       // Clear existing markers
       if (markersRef.current && markersRef.current.length > 0) {
-        markersRef.current.forEach((marker) => {
+        markersRef.current.forEach((marker: Marker) => {
           if (marker && marker.remove) marker.remove()
         })
       }
       markersRef.current = []
 
       // Add trash bin markers
-      trashBins.forEach((bin) => {
+      trashBins.forEach((bin: TrashBin) => {
         if (!bin || !bin.location || bin.location.length !== 2) return
 
         try {
@@ -296,6 +304,7 @@ export default function MapComponent() {
           const trashIcon = window.L.divIcon({
             html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-green-600"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
             className: "trash-bin-marker",
+            iconSize: [24, 24],
           })
 
           const marker = window.L.marker([latitude, longitude], { icon: trashIcon }).addTo(map)
@@ -339,21 +348,22 @@ export default function MapComponent() {
     if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0) return
 
     try {
-      const map = mapInstanceRef.current
+      const map = mapInstanceRef.current!
 
       // Add pollution markers (only showing user reports with images)
       pollutionData
         .filter(
-          (report) =>
+          (report: PollutionReport) =>
             report && report.type === "user" && report.imageUrl && report.location && report.location.length === 2,
         )
-        .forEach((report) => {
+        .forEach((report: PollutionReport) => {
           try {
             const [longitude, latitude] = report.location
 
             const pollutionIcon = window.L.divIcon({
               html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
               className: "pollution-marker",
+              iconSize: [24, 24],
             })
 
             const marker = window.L.marker([latitude, longitude], { icon: pollutionIcon }).addTo(map)
@@ -419,22 +429,23 @@ export default function MapComponent() {
       try {
         // Remove existing heat layer if it exists
         if (heatLayerRef.current) {
-          map.removeLayer(heatLayerRef.current)
+          map?.removeLayer(heatLayerRef.current)
         }
 
-        if (window.L.heatLayer) {
+        if ((window.L as any).heatLayer) {
           // Make sure each report has valid location data
           const validReports = pollutionData.filter(
-            (report) => report && report.location && report.location.length === 2,
+            (report: PollutionReport) => report && report.location && report.location.length === 2,
           )
 
-          const heatData = validReports.map((report) => {
+          const heatData: LatLngTuple[] = validReports.map((report: PollutionReport) => {
             const [longitude, latitude] = report.location
-            return [latitude, longitude, report.severity / 10]
+            return [latitude, longitude, report.severity / 10] as LatLngTuple
           })
 
           if (heatData.length > 0) {
-            const heatLayer = window.L.heatLayer(heatData, {
+            // Use the defined interface for options
+            const heatLayerOptions: SimpleHeatOptions = {
               radius: 25,
               blur: 15,
               maxZoom: 17,
@@ -445,7 +456,9 @@ export default function MapComponent() {
                 0.8: "yellow",
                 1.0: "red",
               },
-            })
+            };
+            // Keep cast for the method call
+            const heatLayer = (window.L as any).heatLayer(heatData, heatLayerOptions) as L.Layer
 
             heatLayer.addTo(map)
             heatLayerRef.current = heatLayer
@@ -459,7 +472,7 @@ export default function MapComponent() {
     }
   }, [mapLoaded, pollutionData])
 
-  const handleReportSubmit = (data: any) => {
+  const handleReportSubmit = (data: ReportSubmitData) => {
     try {
       // In a real app, this would send data to your backend
       console.log("Report submitted:", data)
@@ -467,17 +480,19 @@ export default function MapComponent() {
       // Add the new report to our local state
       const reportLocation = userLocation || [-97.7431, 30.2672] // Use default Austin coordinates if no location
 
+      // Create the new report object (matches ReportSubmitData structure from modal)
       const newReport: PollutionReport = {
         id: `user-${Date.now()}`,
         location: reportLocation,
         type: "user",
         severity: data.severity,
         description: data.description,
-        imageUrl: data.imageUrl,
-        timestamp: new Date().toISOString(),
+        // ImageUrl can be string | null from ReportSubmitData, assign directly
+        imageUrl: data.imageUrl || undefined, // Ensure undefined if null/falsy and PollutionReport expects string | undefined
+        timestamp: data.timestamp,
       }
 
-      setPollutionData((prev) => [...prev, newReport])
+      setPollutionData((prev: PollutionReport[]) => [...prev, newReport])
 
       toast({
         title: "Report Submitted",

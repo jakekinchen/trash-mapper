@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 interface PollutionInfoProps {
   report: {
     id: string
@@ -38,11 +40,17 @@ export default function PollutionInfo({ report }: PollutionInfoProps) {
       </div>
 
       {report.imageUrl && (
-        <img
-          src={report.imageUrl || "/placeholder.svg"}
-          alt="Pollution"
-          className="w-full h-32 object-cover rounded-md my-2"
-        />
+        <div className="relative w-full h-32 my-2">
+          <Image
+            src={report.imageUrl || "/placeholder.svg"}
+            alt="Pollution"
+            fill
+            style={{ objectFit: "cover" }}
+            className="rounded-md"
+            sizes="(max-width: 640px) 100vw, 320px"
+            priority
+          />
+        </div>
       )}
 
       <div className="grid gap-1 text-sm mt-1">

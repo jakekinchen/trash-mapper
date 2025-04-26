@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import Image from "next/image"
 import { useState, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Camera, Upload, X } from "lucide-react"
 
+// Define AND EXPORT a more specific type for the submitted data
+export interface ReportSubmitData {
+  location: [number, number];
+  description?: string;
+  severity: number;
+  imageUrl?: string | null; // Allow null
+  timestamp: string;
+}
+
 interface ReportModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any) => void
+  onSubmit: (data: ReportSubmitData) => void // Use the specific type here
   userLocation: [number, number] | null
 }
 
@@ -96,13 +105,14 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
   const handleSubmit = () => {
     try {
       // Allow submission even without precise location
-      onSubmit({
+      const submitData: ReportSubmitData = { // Ensure the object matches the type
         location: userLocation || [-97.7431, 30.2672], // Use default Austin coordinates if no location
         description,
         severity: severity && severity.length > 0 ? severity[0] : 5,
         imageUrl: image,
         timestamp: new Date().toISOString(),
-      })
+      };
+      onSubmit(submitData)
 
       // Reset form
       setImage(null)
@@ -157,17 +167,20 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation }:
               </Button>
             </div>
           ) : image ? (
-            <div className="relative">
-              <img
-                src={image || "/placeholder.svg"}
+            <div className="relative w-full h-64">
+              <Image
+                src={image}
                 alt="Captured pollution"
-                className="w-full h-64 object-cover rounded-md"
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded-md"
+                sizes="(max-width: 640px) 100vw, 500px"
               />
               <Button
                 onClick={() => setImage(null)}
                 variant="destructive"
                 size="icon"
-                className="absolute top-2 right-2"
+                className="absolute top-2 right-2 z-10"
               >
                 <X className="h-4 w-4" />
               </Button>
