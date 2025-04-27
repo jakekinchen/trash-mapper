@@ -118,8 +118,9 @@ export default function MapComponent() {
   const [isSubmittingReport, setIsSubmittingReport] = useState(false)
   const [isSubmissionSuccess, setIsSubmissionSuccess] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [showTrashBins, setShowTrashBins] = useState(true)
+  const [showTrashBins, setShowTrashBins] = useState(false)
   const [showPollutionMarkers, setShowPollutionMarkers] = useState(true)
+  const [show311Data, setShow311Data] = useState(true)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -504,7 +505,7 @@ export default function MapComponent() {
             report && 
             report.location && 
             report.location.length === 2 &&
-            ((report.type === "user" && report.imageUrl) || report.type === "311")
+            ((report.type === "user" && report.imageUrl) || (report.type === "311" && show311Data))
         );
 
         validReports.forEach((report: PollutionReport) => {
@@ -640,7 +641,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     const reportLocation = userLocation || [-97.7431, 30.2672]; 
@@ -744,7 +745,7 @@ export default function MapComponent() {
             onChange={(e) => setShowTrashBins(e.target.checked)}
             className="form-checkbox h-4 w-4 text-green-600"
           />
-          <span className="text-sm font-medium">Show Trash Bins</span>
+          <span className="text-sm font-medium">Trash Bins</span>
         </label>
         <label className="flex items-center space-x-2 cursor-pointer">
           <input
@@ -753,7 +754,16 @@ export default function MapComponent() {
             onChange={(e) => setShowPollutionMarkers(e.target.checked)}
             className="form-checkbox h-4 w-4 text-red-600"
           />
-          <span className="text-sm font-medium">Show Pollution Markers</span>
+          <span className="text-sm font-medium">User Submitted Litter</span>
+        </label>
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={show311Data}
+            onChange={(e) => setShow311Data(e.target.checked)}
+            className="form-checkbox h-4 w-4 text-blue-600"
+          />
+          <span className="text-sm font-medium">311 Sourced Litter</span>
         </label>
       </div>
       
