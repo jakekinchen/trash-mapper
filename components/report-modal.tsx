@@ -3,13 +3,14 @@
 import type React from "react"
 import Image from "next/image"
 import { useState, useRef } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Camera, Upload, X, Check, Loader2 } from "lucide-react"
+import Webcam from "react-webcam"
 
 // Define AND EXPORT a more specific type for the submitted data
 export interface ReportSubmitData {
@@ -34,61 +35,36 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
   const [description, setDescription] = useState("")
   const [severity, setSeverity] = useState([3]) // 1-5 scale
   const [isCapturing, setIsCapturing] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const webcamRef = useRef<Webcam>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      })
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        setIsCapturing(true)
-      }
+      setIsCapturing(true)
     } catch (err) {
-      console.error("Error accessing camera:", err)
+      console.error("Error starting camera:", err)
       alert("Could not access camera. Please check permissions or try uploading an image instead.")
     }
   }
 
   const captureImage = () => {
     try {
-      if (videoRef.current && canvasRef.current) {
-        const video = videoRef.current
-        const canvas = canvasRef.current
-        const context = canvas.getContext("2d")
-
-        if (context) {
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-          context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-          const imageDataUrl = canvas.toDataURL("image/jpeg")
-          setImage(imageDataUrl) // Set preview
-
-          // Convert canvas to blob then to file
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const capturedFile = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-              setImageFile(capturedFile); // Set the file object
-            }
-          }, 'image/jpeg');
-
-          // Stop the camera stream
-          const stream = video.srcObject as MediaStream
-          if (stream) {
-            stream.getTracks().forEach((track) => track.stop())
-          }
-
-          setIsCapturing(false)
+      if (webcamRef.current) {
+        const imageSrc = webcamRef.current.getScreenshot()
+        if (imageSrc) {
+          setImage(imageSrc)
+          
+          // Convert base64 to file
+          fetch(imageSrc)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
+              setImageFile(file)
+            })
         }
       }
     } catch (error) {
       console.error("Error capturing image:", error)
-      setIsCapturing(false)
     }
   }
 
@@ -141,22 +117,10 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
 
   const handleClose = () => {
     try {
-      // Stop camera if it's running
-      if (isCapturing && videoRef.current) {
-        const stream = videoRef.current.srcObject as MediaStream
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop())
-        }
-      }
-
-      // Reset state
       setIsCapturing(false)
-
-      // Call the provided onClose function
       onClose()
     } catch (error) {
       console.error("Error closing modal:", error)
-      // Still try to close the modal
       onClose()
     }
   }
@@ -166,15 +130,29 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
       <DialogContent className="sm:max-w-md max-w-[95vw] p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Report Pollution</DialogTitle>
+          <DialogDescription>
+            Take a photo or upload an image of the pollution you want to report.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           {isCapturing ? (
-            <div className="relative">
-              <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover rounded-md" />
+            <div className="relative bg-black rounded-md overflow-hidden">
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{
+                  facingMode: "environment",
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 }
+                }}
+                className="w-full h-64 object-cover"
+                style={{ backgroundColor: 'black' }}
+              />
               <Button
                 onClick={captureImage}
-                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-2 text-base"
+                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-2 text-base z-10"
                 variant="secondary"
               >
                 <Camera className="mr-2 h-4 w-4" />
@@ -280,9 +258,6 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
             )}
           </Button>
         </DialogFooter>
-
-        {/* Hidden canvas for image capture */}
-        <canvas ref={canvasRef} className="hidden" />
       </DialogContent>
     </Dialog>
   )
