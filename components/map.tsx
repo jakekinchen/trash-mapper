@@ -129,6 +129,7 @@ export default function MapComponent() {
   const [currentZoom, setCurrentZoom] = useState(13)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [useAltHeatmapPalette] = useState(true)
+  const [validationError, setValidationError] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -187,7 +188,7 @@ export default function MapComponent() {
         
         // Filter out reports with is_valid_environment === false (defensive, in case API changes)
         const validReports = Array.isArray(reports)
-          ? reports.filter((report: any) => report.is_valid_environment !== false)
+          ? reports.filter((report: SupabaseReport) => report.is_valid_environment !== false)
           : [];
         
         // Transform Supabase reports into PollutionReport format
@@ -688,6 +689,7 @@ export default function MapComponent() {
   }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
+    setValidationError(null);
     const reportLocation = userLocation || [-97.7431, 30.2672]; 
     const [longitude, latitude] = reportLocation;
 
@@ -699,12 +701,14 @@ export default function MapComponent() {
     if (data.imageFile) {
       formData.append('image', data.imageFile);
     } else {
+      // This validation remains client-side
       toast({ title: "Error", description: "No image selected.", variant: "destructive" });
       return;
     }
 
     setIsSubmittingReport(true);
-    setIsSubmissionSuccess(false); // Reset success state initially
+    setIsSubmissionSuccess(false);
+
     try {
       const response = await fetch('/api/reports/create', {
         method: 'POST',
@@ -712,48 +716,73 @@ export default function MapComponent() {
       });
 
       const result = await response.json();
+      console.log('[MapComponent] handleReportSubmit - fetch result:', result);
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit report');
+        if (result && result.isValidationError) {
+          const reason = result.reason || "Image rejected by validation.";
+          console.log('[MapComponent] handleReportSubmit - Setting validationError:', reason);
+          setValidationError(reason);
+          setIsSubmittingReport(false);
+        } else {
+          throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+      } else {
+        // --- Success Path --- 
+        setIsSubmissionSuccess(true);
+
+        const newReport: PollutionReport = {
+          id: result.reportId,
+          location: reportLocation,
+          type: "user",
+          severity: data.severity, // Use user's severity initially (backend might adjust later)
+          description: data.description, // TODO: Add description field to form/modal?
+          imageUrl: result.imageUrl,
+          timestamp: new Date().toISOString(), 
+          cleaned_up: false,
+        };
+        setPollutionData((prev: PollutionReport[]) => [...prev, newReport]);
+
+        toast({
+          title: "Report Submitted Successfully",
+          description: "Thank you! Your report is being processed.", 
+        });
+
+        // Delay closing the modal to show success state
+        setTimeout(() => {
+            setIsReportModalOpen(false);
+            setIsSubmissionSuccess(false); // Reset success state after closing
+        }, 1500); // Close after 1.5 seconds
       }
 
-      // --- Success Path --- 
-      setIsSubmissionSuccess(true); // Set success state immediately after successful upload
-
-      const newReport: PollutionReport = {
-        id: result.reportId,
-        location: reportLocation,
-        type: "user",
-        severity: data.severity, // Use user's severity initially
-        description: data.description, 
-        imageUrl: result.imageUrl,
-        timestamp: new Date().toISOString(), 
-        cleaned_up: false,
-      };
-      setPollutionData((prev: PollutionReport[]) => [...prev, newReport]);
-
-      toast({
-        title: "Report Submitted Successfully",
-        description: "Thank you for your report! We'll analyze the severity and update it shortly.", 
-      });
-
-      // Delay closing the modal to show success state
-      setTimeout(() => {
-          setIsReportModalOpen(false);
-          setIsSubmissionSuccess(false); // Reset success state after closing
-      }, 1500); // Close after 1.5 seconds
-
     } catch (error) {
+      // Catch block now primarily handles network errors or non-validation server errors
       console.error("Error submitting report:", error);
       setIsSubmissionSuccess(false); // Ensure success state is false on error
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit report. Please try again.",
-        variant: "destructive",
-      });
+      // Only show generic toast if it wasn't a validation error (already handled above)
+      if (!validationError) { // Check if validationError was set in the try block
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to submit report. Please try again.",
+          variant: "destructive",
+        });
+        // Set submitting false here ONLY for non-validation errors caught here
+        setIsSubmittingReport(false); 
+      } // If it WAS a validation error, isSubmittingReport is set within the try block's check
+      
     } finally {
-      // Reset submitting state slightly earlier than modal close for smoother transition
-      setTimeout(() => setIsSubmittingReport(false), 1000);
+       // The finally block might be too simple now. 
+       // We only need to potentially reset state if the modal closes unexpectedly
+       // or if the success timeout hasn't run.
+       // Let's remove the complex finally logic for now as state resets are handled
+       // within the try/catch blocks or on modal close.
+       /* PREVIOUS LOGIC:
+        if (!validationError) {
+           setTimeout(() => setIsSubmittingReport(false), 1000);
+        } else {
+            setIsSubmittingReport(false);
+        }
+       */
     }
   };
 
@@ -775,6 +804,9 @@ export default function MapComponent() {
       }
     }
   }, [])
+
+  // *** DEBUG LOG 3 ***
+  console.log('[MapComponent] Rendering with validationError state:', validationError);
 
   return (
     <div className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
@@ -826,11 +858,15 @@ export default function MapComponent() {
       {/* Report modal */}
       <ReportModal
         isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
+        onClose={() => {
+             setIsReportModalOpen(false);
+        }}
         onSubmit={handleReportSubmit}
         userLocation={userLocation}
         isSubmitting={isSubmittingReport}
         isSuccess={isSubmissionSuccess}
+        validationError={validationError}
+        onClearValidationError={() => setValidationError(null)}
       />
 
       {/* Leaflet scripts */}

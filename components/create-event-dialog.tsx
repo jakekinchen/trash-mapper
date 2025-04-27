@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Calendar as CalendarIcon } from "lucide-react"
+import { format } from 'date-fns'
+import { cn } from "@/lib/utils"
 import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Dialog,
   DialogContent,
@@ -18,7 +22,6 @@ import {
 } from '@/components/ui/dialog'
 import { createEvent } from '@/lib/events'
 import { useToast } from '@/components/ui/use-toast'
-import { format } from 'date-fns'
 import { supabase } from '@/lib/supabaseClient'
 
 interface CreateEventDialogProps {
@@ -31,6 +34,19 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
   const [loading, setLoading] = useState(false)
   const [date, setDate] = useState<Date>()
   const { toast } = useToast()
+
+  useEffect(() => {
+    const handleOpen = () => {
+      console.log('Received openCreateEventDialog event');
+      setOpen(true);
+    };
+
+    window.addEventListener('openCreateEventDialog', handleOpen);
+
+    return () => {
+      window.removeEventListener('openCreateEventDialog', handleOpen);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -54,24 +70,26 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
           description: 'You must be logged in to create an event',
           variant: 'destructive',
         })
+        setLoading(false);
         return
       }
 
       const timeStart = formData.get('time_start') as string
       const timeEnd = formData.get('time_end') as string
+      
+      if (!date) { throw new Error("Date is not selected"); }
       const eventDate = format(date, 'yyyy-MM-dd')
       
-      // Combine date and time into ISO string
       const startTime = new Date(`${eventDate}T${timeStart}`).toISOString()
       const endTime = new Date(`${eventDate}T${timeEnd}`).toISOString()
 
-      // Validate end time is after start time
       if (new Date(endTime) <= new Date(startTime)) {
         toast({
           title: 'Error',
           description: 'End time must be after start time',
           variant: 'destructive',
         })
+        setLoading(false);
         return
       }
 
@@ -106,14 +124,14 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Create Event</Button>}
+        {trigger || <Button variant="outline" className="hidden">Trigger</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create Event</DialogTitle>
             <DialogDescription>
-              Create a new cleanup event. Fill out the details below.
+              Let&apos;s go pick up some trash! Create a new cleanup event. Fill out the details below.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -136,13 +154,28 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
             </div>
             <div className="grid gap-2">
               <Label>Date</Label>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">

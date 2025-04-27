@@ -33,11 +33,11 @@ export default function MyReportsPage() {
       try {
         const data = await getMyReports();
         const validReports = Array.isArray(data)
-          ? data.filter((report: any) => report.is_valid_environment !== false)
+          ? data.filter((report: Report) => report.is_valid_environment !== false)
           : [];
         setReports(validReports);
         if (Array.isArray(data)) {
-          const rejectedCount = data.filter((r: any) => r.is_valid_environment === false).length;
+          const rejectedCount = data.filter((r: Report) => r.is_valid_environment === false).length;
           if (rejectedCount > 0) {
             toast({
               title: "Report Rejected",

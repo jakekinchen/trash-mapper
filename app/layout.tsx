@@ -6,6 +6,7 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/navbar"
 import { FloatingButtons } from "@/components/floating-buttons"
+import { CreateEventDialog } from "@/components/create-event-dialog"
 import { DrawerProvider } from '@/lib/drawer-context'
 
 const inter = Inter({ subsets: ["latin"] })
@@ -45,6 +46,7 @@ export default function RootLayout({
               {children}
             </main>
             <FloatingButtons />
+            <CreateEventDialog />
           </DrawerProvider>
         </ThemeProvider>
       </body>

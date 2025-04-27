@@ -1,19 +1,24 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from "openai";
 import { z } from "zod";
 import { createClient } from '@/lib/supabaseServer'
 import sharp from 'sharp';
+import { Buffer } from 'buffer';
 
 const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
 
-// ----- Zod schema for the AI result -----
-const ReportAnalysis = z.object({
-    severity: z.number().int().min(1).max(5),
-})
+// Define the type based on the Zod schema and usage
+interface EnvironmentValidationResult {
+  is_valid_environment: boolean;
+  reason?: string;
+}
 
+// ----- Zod schema for the AI result -----
 const EnvironmentValidation = z.object({
     is_valid_environment: z.boolean(),
-    reason: z.string(),
+    reason: z.string().optional(), // Make reason optional as it might not always be provided
 })
 
 export async function POST(request: NextRequest) {
@@ -43,21 +48,16 @@ export async function POST(request: NextRequest) {
       'image/jpeg',
       'image/png',
       'image/webp',
-      'image/gif',
-      'image/bmp',
-      'image/tiff',
-      'image/heic',
-      'image/heif',
-      'image/avif'
+      // Removed less common types for brevity, add back if needed
     ]
     if (!allowedTypes.includes(image.type)) {
       return NextResponse.json(
-        { error: 'Unsupported file type. Please upload a JPEG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF, or AVIF image.' },
+        { error: 'Unsupported file type. Please upload a JPEG, PNG, or WebP image.', isValidationError: true, reason: 'Invalid file type' }, // Add validation context
         { status: 400 },
       )
     }
 
-    // Optimize image using Sharp
+    // Optimize image using Sharp first
     const imageBuffer = Buffer.from(await image.arrayBuffer());
     const optimizedImageBuffer = await sharp(imageBuffer)
       .resize(768, 768, {
@@ -66,71 +66,26 @@ export async function POST(request: NextRequest) {
       })
       .webp({ quality: 80 })
       .toBuffer();
-
-    // 1. upload optimized image
-    const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}.webp`
-    const { error: uploadError } = await supabase.storage
-      .from('report-images')
-      .upload(
-        fileName,
-        optimizedImageBuffer,
-        { contentType: 'image/webp' },
-      )
-
-    if (uploadError) {
-      console.error(uploadError)
-      return NextResponse.json({ error: 'Image upload failed' }, { status: 500 })
-    }
-
-    const publicUrl =
-      supabase.storage.from('report-images').getPublicUrl(fileName).data.publicUrl
-
-    // 2. insert initial report with user's severity
-    const { data: inserted, error: insertErr } = await supabase
-      .from('reports')
-      .insert({
-        user_id: user.id,
-        geom: `POINT(${lon} ${lat})`,
-        image_url: publicUrl,
-        severity: userSeverity,
-        cleaned_up: false,
-      })
-      .select('id')
-      .single()
-
-    if (insertErr) {
-      await supabase.storage.from('report-images').remove([fileName])
-      return NextResponse.json(
-        { error: 'Failed to save report', details: insertErr.message },
-        { status: 500 },
-      )
-    }
-
-    // Send initial success response
-    const response = NextResponse.json(
-      { success: true, reportId: inserted.id, imageUrl: publicUrl },
-      { status: 201 },
-    )
-
-    // 3. ask OpenAI for severity and environment validation (after sending response)
-    let analysis: z.infer<typeof ReportAnalysis> | null = null
-    let environmentValidation: z.infer<typeof EnvironmentValidation> | null = null
+      
+    // --- START: OpenAI Validation --- 
+    let environmentValidationResult: EnvironmentValidationResult;
     try {
+      const base64Image = optimizedImageBuffer.toString('base64');
+      const dataUrl = `data:image/webp;base64,${base64Image}`;
+
+      console.log('Sending image to OpenAI for validation...');
       const resp = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Or gpt-4-vision-preview or gpt-4o
         messages: [
           { 
             role: 'system', 
-            content: `Analyze the image and return JSON with two parts:
-1. Rate the trash severity 1–5 (the user rated this ${userSeverity}/5, consider their rating but make your own assessment)
-2. Determine if this is a valid environment for trash reporting (public space, outdoor area, etc.) vs invalid (personal photos, faces, indoor private spaces, etc.)
-Return the result as a JSON object with severity (number) and is_valid_environment (boolean) fields.` 
+            content: `Analyze the attached image. Determine if the image depicts litter/pollution in a physical, outdoor, public (or semi-public like a park) environment suitable for a litter reporting app. Do not approve images that are primarily indoors, screenshots, maps, selfies, faces, or lack clear litter. Respond ONLY with a JSON object containing two fields: "is_valid_environment" (boolean) and "reason" (string, explaining why it's invalid, or "Valid environment" if valid). Example invalid reasons: "Image appears to be indoors.", "No clear litter visible.", "Image is a screenshot."` 
           },
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Analyze the image for trash severity and environment validity.' },
-              { type: 'image_url', image_url: { url: publicUrl } },
+              { type: 'text', text: 'Validate the environment and litter presence in this image.' },
+              { type: 'image_url', image_url: { url: dataUrl } }, // Use data URL
             ],
           },
         ],
@@ -139,51 +94,115 @@ Return the result as a JSON object with severity (number) and is_valid_environme
 
       const raw = resp.choices[0]?.message?.content
       if (raw) {
-        console.log('Raw AI response:', raw)
+        console.log('Raw AI validation response:', raw)
         const parsed = JSON.parse(raw)
-        analysis = ReportAnalysis.parse({ severity: parsed.severity })
-        environmentValidation = EnvironmentValidation.parse({
+        // Only parse validation for now, severity can be added back if needed
+        environmentValidationResult = EnvironmentValidation.parse({
           is_valid_environment: parsed.is_valid_environment,
           reason: parsed.reason || 'No reason provided'
         })
-        console.log('Parsed AI analysis:', {
-          severity: analysis.severity,
-          is_valid_environment: environmentValidation.is_valid_environment,
-          reason: environmentValidation.reason
-        })
+        console.log('Parsed AI validation:', environmentValidationResult)
+
+        // --- Add Conditional Logic Here ---
+        if (!environmentValidationResult.is_valid_environment) {
+           console.log('OpenAI rejected image environment.');
+           return NextResponse.json(
+             { 
+               error: "Image rejected", 
+               reason: environmentValidationResult.reason || 'Image does not show litter in a valid outdoor environment.',
+               isValidationError: true // Flag for frontend
+             }, 
+             { status: 400 }
+           );
+        }
+        // Optional: Parse severity here if needed later for insertion
+
+      } else {
+        // Handle case where AI response is empty or malformed - treat as validation failure
+        console.error('OpenAI returned empty or malformed response for validation.');
+        return NextResponse.json(
+             { 
+               error: "Validation failed", 
+               reason: 'Could not validate image with AI.',
+               isValidationError: true
+             }, 
+             { status: 500 } // Use 500 as it's an unexpected server-side issue
+           );
       }
     } catch (e) {
-      console.error('OpenAI analysis failed:', e)
+      console.error('OpenAI validation call failed:', e)
+       // Handle specific OpenAI errors if needed, otherwise return generic server error
+        return NextResponse.json(
+             { 
+               error: "Validation failed", 
+               reason: 'Error occurred during AI image validation.',
+               isValidationError: true // Still treat as validation context for frontend
+             }, 
+             { status: 500 } // Internal server error
+           );
+    }
+    // --- END: OpenAI Validation --- 
+    
+    // If validation passed, proceed with upload and insert
+    console.log('OpenAI validation successful. Proceeding with upload and insert.');
+
+    // 1. upload optimized image
+    const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}.webp`
+    const { error: uploadError } = await supabase.storage
+      .from('report-images') // Ensure this bucket name is correct
+      .upload(
+        fileName,
+        optimizedImageBuffer,
+        { contentType: 'image/webp' },
+      )
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError)
+      return NextResponse.json({ error: 'Image upload failed' }, { status: 500 })
     }
 
-    // 4. update severity and environment validation if AI succeeded
-    if (analysis || environmentValidation) {
-      const updates: { severity?: number; is_valid_environment?: boolean } = {}
-      
-      if (analysis) {
-        const averageSeverity = Math.round((userSeverity + analysis.severity) / 2)
-        updates.severity = averageSeverity
-      }
-      
-      if (environmentValidation) {
-        updates.is_valid_environment = environmentValidation.is_valid_environment
-      }
+    const publicUrl =
+      supabase.storage.from('report-images').getPublicUrl(fileName).data.publicUrl
 
-      console.log('Updating report with:', updates)
-      const { error: updErr } = await supabase
-        .from('reports')
-        .update(updates)
-        .eq('id', inserted.id)
-      if (updErr) {
-        console.error('Report update failed:', updErr)
-      } else {
-        console.log('Successfully updated report with AI analysis')
+    // 2. insert report (including validation status)
+    const { data: inserted, error: insertErr } = await supabase
+      .from('reports') // Ensure this table name is correct
+      .insert({
+        user_id: user.id,
+        geom: `POINT(${lon} ${lat})`,
+        image_url: publicUrl,
+        severity: userSeverity, // Use user severity for now, or use AI severity if parsed
+        is_valid_environment: true, // Set to true since validation passed
+        cleaned_up: false,
+      })
+      .select('id')
+      .single()
+
+    if (insertErr) {
+      console.error('Supabase insert error:', insertErr);
+      // Attempt to clean up the uploaded image if insert fails
+      try {
+        await supabase.storage.from('report-images').remove([fileName]);
+      } catch (cleanupErr) {
+        console.error('Failed to cleanup orphaned image:', cleanupErr);
       }
+      return NextResponse.json(
+        { error: 'Failed to save report', details: insertErr.message },
+        { status: 500 },
+      )
     }
 
-    return response
+    // Send success response
+    console.log('Report created successfully:', inserted.id);
+    return NextResponse.json(
+      { success: true, reportId: inserted.id, imageUrl: publicUrl },
+      { status: 201 }, // Use 201 Created status
+    )
+
+    // --- REMOVED: Post-response update logic --- 
+
   } catch (err) {
-    console.error(err)
+    console.error('Unexpected error in POST /api/reports/create:', err)
     return NextResponse.json(
       { error: 'Unexpected error', details: err instanceof Error ? err.message : String(err) },
       { status: 500 },
