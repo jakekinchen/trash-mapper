@@ -228,14 +228,20 @@ export default function MapComponent() {
         Papa.parse<CSVRow>(csvText, {
           header: true,
           complete: (results) => {
-            const new311Reports: PollutionReport[] = results.data.map((row) => ({
-              id: `311-${row['Created Date']}-${row['Latitude Coordinate']}-${row['Longitude Coordinate']}`,
-              location: [parseFloat(row['Longitude Coordinate']), parseFloat(row['Latitude Coordinate'])],
-              type: "311" as const,
-              severity: 3, // Default severity for 311 reports
-              timestamp: row['Created Date'],
-              cleaned_up: false
-            }));
+            const new311Reports: PollutionReport[] = results.data
+              .filter(row => {
+                const lat = parseFloat(row['Latitude Coordinate']);
+                const lon = parseFloat(row['Longitude Coordinate']);
+                return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
+              })
+              .map((row) => ({
+                id: `311-${row['Created Date']}-${row['Latitude Coordinate']}-${row['Longitude Coordinate']}`,
+                location: [parseFloat(row['Longitude Coordinate']), parseFloat(row['Latitude Coordinate'])],
+                type: "311" as const,
+                severity: 3, // Default severity for 311 reports
+                timestamp: row['Created Date'],
+                cleaned_up: false
+              }));
             
             setPollutionData(prev => [...prev, ...new311Reports]);
           }
