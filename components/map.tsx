@@ -490,26 +490,37 @@ export default function MapComponent() {
               };
 
               popupElement.innerHTML = `
-                <div class="p-1 max-w-xs">
-                  <div class="flex justify-between items-start">
+                <div class="p-2 max-w-xs">
+                  <div class="flex justify-between items-start mb-2">
                     <h3 class="font-semibold text-base">Pollution Report</h3>
-                    <span class="font-bold ${getSeverityColor(report.severity)}">${report.severity}/5</span>
+                    <div class="flex items-center gap-2">
+                      ${report.cleaned_up ? `
+                        <span class="text-green-600 text-sm font-medium">Cleaned Up</span>
+                      ` : ''}
+                      <span class="font-bold ${getSeverityColor(report.severity)}">${report.severity}/5</span>
+                    </div>
                   </div>
                   ${
                     report.imageUrl
                       ? `
-                    <img src="${report.imageUrl}" alt="Pollution" class="w-full h-32 object-cover rounded-md my-2" />
+                    <div class="mb-2">
+                      <img src="${report.imageUrl}" alt="Pollution" class="w-full h-32 object-cover rounded-md" />
+                    </div>
                   `
                       : ""
                   }
-                  <div class="grid gap-1 text-sm mt-1">
-                    ${report.description ? `<p>${report.description}</p>` : ""}
-                    <div class="grid grid-cols-2 gap-x-2 mt-1">
+                  <div class="space-y-1.5">
+                    ${report.description ? `
+                      <div class="text-sm">
+                        <p>${report.description}</p>
+                      </div>
+                    ` : ""}
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                       <span class="text-muted-foreground">Source:</span>
                       <span>${getTypeLabel(report.type)}</span>
                       <span class="text-muted-foreground">Reported:</span>
                       <span>${new Date(report.timestamp).toLocaleDateString()}</span>
-                      <span class="text-muted-foreground">Coordinates:</span>
+                      <span class="text-muted-foreground">Coords:</span>
                       <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
                     </div>
                   </div>
