@@ -20,4 +20,18 @@ export async function getMyReports() {
   // Assuming the report type includes all fields fetched
   // You might need to define a Report type in types/index.ts
   return data;
+}
+
+export async function getAllPollutionReports() {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching pollution reports:', error);
+    throw error;
+  }
+
+  return data;
 } 

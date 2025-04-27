@@ -5,6 +5,8 @@ import { useToast } from "@/components/ui/use-toast"
 import ReportModal, { type ReportSubmitData } from "./report-modal"
 import Script from "next/script"
 import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
+import { getAllPollutionReports } from '@/lib/reports'
+import wkx from 'wkx'
 
 // Types for our data
 interface TrashBin {
@@ -34,11 +36,20 @@ interface TrashBin {
   }
 }
 
+interface SupabaseReport {
+  id: string;
+  user_id: string;
+  geom: string; // WKB format
+  severity: number;
+  created_at: string;
+  image_url: string;
+}
+
 interface PollutionReport {
   id: string
   location: [number, number]
   type: "user" | "311" | "historical"
-  severity: number // 1-10
+  severity: number // 1-5
   description?: string
   imageUrl?: string
   timestamp: string
@@ -149,50 +160,51 @@ export default function MapComponent() {
 
   // Fetch pollution data
   useEffect(() => {
-    // This would be an API call in a real application
     const fetchPollutionData = async () => {
       try {
-        // Simulating API response - using Austin coordinates
-        const mockPollutionData: PollutionReport[] = [
-          {
-            id: "1",
-            location: [-97.7431, 30.2672],
-            type: "311",
-            severity: 8,
-            description: "Illegal dumping",
-            timestamp: "2023-04-10T12:00:00Z",
-          },
-          {
-            id: "2",
-            location: [-97.75, 30.27],
-            type: "historical",
-            severity: 5,
-            description: "Recurring litter",
-            timestamp: "2023-03-15T09:30:00Z",
-          },
-          {
-            id: "3",
-            location: [-97.74, 30.265],
+        const reports = await getAllPollutionReports();
+        
+        // Transform Supabase reports into PollutionReport format
+        const pollutionData: PollutionReport[] = reports.map((report: SupabaseReport) => {
+          // Extract coordinates from the geom field
+          let coordinates: [number, number] = [0, 0];
+          if (report.geom) {
+            try {
+              // Parse the WKB data
+              const geometry = wkx.Geometry.parse(Buffer.from(report.geom, 'hex')) as wkx.Point;
+              
+              if (geometry instanceof wkx.Point) {
+                coordinates = [geometry.x, geometry.y];
+              }
+            } catch (e) {
+              console.error('Error parsing geom:', e);
+            }
+          }
+          
+          return {
+            id: report.id,
+            location: coordinates,
             type: "user",
-            severity: 7,
-            description: "Plastic waste",
-            imageUrl: "/placeholder.svg?height=200&width=200",
-            timestamp: "2023-04-18T15:45:00Z",
-          },
-        ]
-        setPollutionData(mockPollutionData)
+            severity: report.severity,
+            description: "", // Add description field if needed
+            imageUrl: report.image_url,
+            timestamp: report.created_at,
+          };
+        });
+        
+        setPollutionData(pollutionData);
       } catch (error) {
-        console.error("Error fetching pollution data:", error)
+        console.error("Error fetching pollution data:", error);
         toast({
           title: "Error",
           description: "Failed to load pollution data",
           variant: "destructive",
-        })
+        });
       }
-    }
+    };
 
-    fetchPollutionData()
-  }, [toast])
+    fetchPollutionData();
+  }, [toast]);
 
   // Ensure mapLoaded is true if window.L is already available (for client navigation)
   useEffect(() => {
@@ -416,94 +428,93 @@ export default function MapComponent() {
 
   // Add pollution data
   useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0)
-      {
-        return
-      }
+    if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0) {
+      return;
+    }
 
     try {
-      const map = mapInstanceRef.current!
+      const map = mapInstanceRef.current!;
 
       // Add pollution markers (only showing user reports with images)
-      pollutionData
-        .filter(
-          (report: PollutionReport) =>
-            report && report.type === "user" && report.imageUrl && report.location && report.location.length === 2,
-        )
-        .forEach((report: PollutionReport) => {
-          try {
-            const [longitude, latitude] = report.location
+      const validReports = pollutionData.filter(
+        (report: PollutionReport) =>
+          report && report.type === "user" && report.imageUrl && report.location && report.location.length === 2,
+      );
 
-            const pollutionIcon = window.L.divIcon({
-              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
-              className: "pollution-marker",
-              iconSize: [24, 24],
-            })
+      validReports.forEach((report: PollutionReport) => {
+        try {
+          const [longitude, latitude] = report.location;
 
-            const marker = window.L.marker([latitude, longitude], { icon: pollutionIcon }).addTo(map)
+          const pollutionIcon = window.L.divIcon({
+            html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+            className: "pollution-marker",
+            iconSize: [24, 24],
+          });
 
-            marker.bindPopup(() => {
-              const popupElement = document.createElement("div")
+          const marker = window.L.marker([latitude, longitude], { icon: pollutionIcon }).addTo(map);
 
-              const getSeverityColor = (severity: number) => {
-                if (severity >= 5) return "text-red-600"
-                if (severity >= 3) return "text-orange-500"
-                return "text-yellow-500"
+          marker.bindPopup(() => {
+            const popupElement = document.createElement("div");
+
+            const getSeverityColor = (severity: number) => {
+              if (severity >= 5) return "text-red-600";
+              if (severity >= 3) return "text-orange-500";
+              return "text-yellow-500";
+            };
+
+            const getTypeLabel = (type: string) => {
+              switch (type) {
+                case "user":
+                  return "User Report";
+                case "311":
+                  return "311 Call";
+                case "historical":
+                  return "Historical Data";
+                default:
+                  return type;
               }
+            };
 
-              const getTypeLabel = (type: string) => {
-                switch (type) {
-                  case "user":
-                    return "User Report"
-                  case "311":
-                    return "311 Call"
-                  case "historical":
-                    return "Historical Data"
-                  default:
-                    return type
+            popupElement.innerHTML = `
+              <div class="p-1 max-w-xs">
+                <div class="flex justify-between items-start">
+                  <h3 class="font-semibold text-base">Pollution Report</h3>
+                  <span class="font-bold ${getSeverityColor(report.severity)}">${report.severity}/5</span>
+                </div>
+                ${
+                  report.imageUrl
+                    ? `
+                  <img src="${report.imageUrl}" alt="Pollution" class="w-full h-32 object-cover rounded-md my-2" />
+                `
+                    : ""
                 }
-              }
-
-              popupElement.innerHTML = `
-                <div class="p-1 max-w-xs">
-                  <div class="flex justify-between items-start">
-                    <h3 class="font-semibold text-base">Pollution Report</h3>
-                    <span class="font-bold ${getSeverityColor(report.severity)}">${report.severity}/10</span>
-                  </div>
-                  ${
-                    report.imageUrl
-                      ? `
-                    <img src="${report.imageUrl}" alt="Pollution" class="w-full h-32 object-cover rounded-md my-2" />
-                  `
-                      : ""
-                  }
-                  <div class="grid gap-1 text-sm mt-1">
-                    ${report.description ? `<p>${report.description}</p>` : ""}
-                    <div class="grid grid-cols-2 gap-x-2 mt-1">
-                      <span class="text-muted-foreground">Source:</span>
-                      <span>${getTypeLabel(report.type)}</span>
-                      <span class="text-muted-foreground">Reported:</span>
-                      <span>${new Date(report.timestamp).toLocaleDateString()}</span>
-                      <span class="text-muted-foreground">Coordinates:</span>
-                      <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
-                    </div>
+                <div class="grid gap-1 text-sm mt-1">
+                  ${report.description ? `<p>${report.description}</p>` : ""}
+                  <div class="grid grid-cols-2 gap-x-2 mt-1">
+                    <span class="text-muted-foreground">Source:</span>
+                    <span>${getTypeLabel(report.type)}</span>
+                    <span class="text-muted-foreground">Reported:</span>
+                    <span>${new Date(report.timestamp).toLocaleDateString()}</span>
+                    <span class="text-muted-foreground">Coordinates:</span>
+                    <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
                   </div>
                 </div>
-              `
-              return popupElement
-            })
+              </div>
+            `;
+            return popupElement;
+          });
 
-            markersRef.current.push(marker)
-          } catch (error) {
-            console.error("Error adding pollution marker:", error)
-          }
-        })
+          markersRef.current.push(marker);
+        } catch (error) {
+          console.error("Error adding pollution marker:", error);
+        }
+      });
 
       // Create heat map data
       try {
         // Remove existing heat layer if it exists
         if (heatLayerRef.current) {
-          map?.removeLayer(heatLayerRef.current)
+          map?.removeLayer(heatLayerRef.current);
         }
 
         const leafletWithHeat = window.L as unknown as LeafletWithHeat;
@@ -511,15 +522,14 @@ export default function MapComponent() {
           // Make sure each report has valid location data
           const validReports = pollutionData.filter(
             (report: PollutionReport) => report && report.location && report.location.length === 2,
-          )
+          );
 
           const heatData: LatLngTuple[] = validReports.map((report: PollutionReport) => {
-            const [longitude, latitude] = report.location
-            return [latitude, longitude, report.severity / 10] as LatLngTuple
-          })
+            const [longitude, latitude] = report.location;
+            return [latitude, longitude, report.severity / 5] as LatLngTuple;
+          });
 
           if (heatData.length > 0) {
-            // Use the defined interface for options
             const heatLayerOptions: SimpleHeatOptions = {
               radius: 25,
               blur: 15,
@@ -532,20 +542,19 @@ export default function MapComponent() {
                 1.0: "red",
               },
             };
-            // Keep cast for the method call
-            const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer
+            const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer;
 
-            heatLayer.addTo(map)
-            heatLayerRef.current = heatLayer
+            heatLayer.addTo(map);
+            heatLayerRef.current = heatLayer;
           }
         }
       } catch (error) {
-        console.error("Error creating heat map:", error)
+        console.error("Error creating heat map:", error);
       }
     } catch (error) {
-      console.error("Error adding pollution data:", error)
+      console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData])
+  }, [mapLoaded, pollutionData]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     const reportLocation = userLocation || [-97.7431, 30.2672]; 
@@ -667,9 +676,15 @@ export default function MapComponent() {
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossOrigin=""
-        onLoad={() => setMapLoaded(true)}
+        onLoad={() => {
+          setMapLoaded(true);
+          // Load heat map script after Leaflet is loaded
+          const script = document.createElement('script');
+          script.src = "https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js";
+          script.async = true;
+          document.body.appendChild(script);
+        }}
       />
-      <Script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" onLoad={() => {}} />
     </div>
   )
 }
