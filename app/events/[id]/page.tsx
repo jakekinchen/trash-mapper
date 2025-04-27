@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Event, EventAttendee } from '@/types'
 import { getEvent, getEventAttendees, registerForEvent, unregisterFromEvent, isUserRegistered } from '@/lib/events'
 import { supabase } from '@/lib/supabaseClient'
@@ -10,15 +10,9 @@ import { useToast } from '@/components/ui/use-toast'
 import { format } from 'date-fns'
 import { Calendar, Clock, MapPin, Users } from 'lucide-react'
 
-interface Props {
-  params: {
-    id: string
-  }
-  searchParams: Record<string, string | string[] | undefined>
-}
-
-export default function EventPage({ params, searchParams }: Props) {
+export default function EventPage() {
   const router = useRouter()
+  const { id } = useParams<{ id: string }>()
   const { toast } = useToast()
   const [event, setEvent] = useState<Event | null>(null)
   const [attendees, setAttendees] = useState<EventAttendee[]>([])
@@ -28,9 +22,9 @@ export default function EventPage({ params, searchParams }: Props) {
 
   const loadEventData = useCallback(async () => {
     try {
-      const eventData = await getEvent(params.id)
+      const eventData = await getEvent(id)
       setEvent(eventData)
-      const attendeesData = await getEventAttendees(params.id)
+      const attendeesData = await getEventAttendees(id)
       setAttendees(attendeesData)
     } catch (error) {
       console.error('Error loading event:', error)
@@ -42,16 +36,16 @@ export default function EventPage({ params, searchParams }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [params.id, toast])
+  }, [id, toast])
 
   const checkAttendance = useCallback(async (currentUserId: string) => {
     try {
-      const attending = await isUserRegistered(params.id, currentUserId)
+      const attending = await isUserRegistered(id, currentUserId)
       setIsAttending(attending)
     } catch (error) {
       console.error('Error checking attendance:', error)
     }
-  }, [params.id])
+  }, [id])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -71,14 +65,14 @@ export default function EventPage({ params, searchParams }: Props) {
 
     try {
       if (isAttending) {
-        await unregisterFromEvent(params.id, userId)
+        await unregisterFromEvent(id, userId)
         setIsAttending(false)
         toast({
           title: 'Success',
           description: 'You have unregistered from the event.',
         })
       } else {
-        await registerForEvent(params.id, userId)
+        await registerForEvent(id, userId)
         setIsAttending(true)
         toast({
           title: 'Success',
