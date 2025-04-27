@@ -27,8 +27,8 @@ export default function PollutionInfo({ report }: PollutionInfoProps) {
   }
 
   const getSeverityColor = (severity: number) => {
-    if (severity >= 8) return "text-red-600"
-    if (severity >= 5) return "text-orange-500"
+    if (severity >= 5) return "text-red-600"
+    if (severity >= 3) return "text-orange-500"
     return "text-yellow-500"
   }
 
@@ -36,7 +36,7 @@ export default function PollutionInfo({ report }: PollutionInfoProps) {
     <div className="p-1 max-w-xs">
       <div className="flex justify-between items-start">
         <h3 className="font-semibold text-base">Pollution Report</h3>
-        <span className={`font-bold ${getSeverityColor(report.severity)}`}>{report.severity}/10</span>
+        <span className={`font-bold ${getSeverityColor(report.severity)}`}>{report.severity}/5</span>
       </div>
 
       {report.imageUrl && (

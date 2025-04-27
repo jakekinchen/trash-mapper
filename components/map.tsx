@@ -416,7 +416,10 @@ export default function MapComponent() {
 
   // Add pollution data
   useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0) return
+    if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0)
+      {
+        return
+      }
 
     try {
       const map = mapInstanceRef.current!
@@ -443,8 +446,8 @@ export default function MapComponent() {
               const popupElement = document.createElement("div")
 
               const getSeverityColor = (severity: number) => {
-                if (severity >= 8) return "text-red-600"
-                if (severity >= 5) return "text-orange-500"
+                if (severity >= 5) return "text-red-600"
+                if (severity >= 3) return "text-orange-500"
                 return "text-yellow-500"
               }
 
