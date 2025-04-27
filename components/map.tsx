@@ -8,6 +8,7 @@ import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 import { getAllPollutionReports } from '@/lib/reports'
 import wkx from 'wkx'
 import { Filter } from 'lucide-react'
+import { ALT_HEATMAP_GRADIENT } from './heatmap-palettes'
 
 // Types for our data
 interface TrashBin {
@@ -126,6 +127,7 @@ export default function MapComponent() {
   const [show311Data, setShow311Data] = useState(true)
   const [currentZoom, setCurrentZoom] = useState(13)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [useAltHeatmapPalette] = useState(true)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -436,7 +438,7 @@ export default function MapComponent() {
             const [longitude, latitude] = bin.location
 
             const trashIcon = window.L.divIcon({
-              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-green-600"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
               className: "trash-bin-marker",
               iconSize: [24, 24],
             })
@@ -517,7 +519,7 @@ export default function MapComponent() {
             const [longitude, latitude] = report.location;
 
             const pollutionIcon = window.L.divIcon({
-              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 ${report.type === "311" ? "text-blue-500" : "text-red-500"}"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${report.type === "311" ? "#10B981" : (report.type === "user" ? "#BF5700" : "#3b82f6")}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 ${report.type === "311" ? "text-emerald-500" : (report.type === "user" ? "text-[#BF5700]" : "text-blue-500")}""><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
               className: "pollution-marker",
               iconSize: [24, 24],
             });
@@ -581,8 +583,40 @@ export default function MapComponent() {
                       <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
                     </div>
                   </div>
+                  ${report.type === "user" ? `
+                    <button class="delete-report-btn mt-3 w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition" data-report-id="${report.id}">Delete Report</button>
+                  ` : ''}
                 </div>
               `;
+
+              // Add event listener for delete button (after popup is opened)
+              setTimeout(() => {
+                const btn = popupElement.querySelector('.delete-report-btn') as HTMLButtonElement | null;
+                if (btn) {
+                  btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    btn.textContent = 'Deleting...';
+                    btn.disabled = true;
+                    try {
+                      const res = await fetch('/api/reports/delete', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reportId: report.id })
+                      });
+                      const result = await res.json();
+                      if (!res.ok) throw new Error(result.error || 'Failed to delete');
+                      // Remove marker from map and update state
+                      marker.remove();
+                      setPollutionData((prev: PollutionReport[]) => prev.filter(r => r.id !== report.id));
+                      toast({ title: 'Report deleted', description: 'Your report was removed.', variant: 'default' });
+                    } catch (err) {
+                      btn.textContent = 'Delete Report';
+                      btn.disabled = false;
+                      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete', variant: 'destructive' });
+                    }
+                  });
+                }
+              }, 0);
               return popupElement;
             });
 
@@ -623,7 +657,7 @@ export default function MapComponent() {
                 radius: 25,
                 blur: 15,
                 maxZoom: 17,
-                gradient: {
+                gradient: useAltHeatmapPalette ? ALT_HEATMAP_GRADIENT : {
                   0.4: "blue",
                   0.6: "cyan",
                   0.7: "lime",
@@ -645,7 +679,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     const reportLocation = userLocation || [-97.7431, 30.2672]; 

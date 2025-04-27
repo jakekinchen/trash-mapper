@@ -127,7 +127,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-w-[95vw] p-4 sm:p-6">
+      <DialogContent className="sm:max-w-md max-w-[95vw] p-2 sm:p-6 max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report Pollution</DialogTitle>
           <DialogDescription>
@@ -137,7 +137,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
 
         <div className="grid gap-4 py-4">
           {isCapturing ? (
-            <div className="relative bg-black rounded-md overflow-hidden">
+            <div className="relative bg-black rounded-md overflow-hidden h-48 sm:h-64">
               <Webcam
                 ref={webcamRef}
                 audio={false}
@@ -147,7 +147,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
                   width: { ideal: 1280 },
                   height: { ideal: 720 }
                 }}
-                className="w-full h-64 object-cover"
+                className="w-full h-full object-cover"
                 style={{ backgroundColor: 'black' }}
               />
               <Button
@@ -160,7 +160,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
               </Button>
             </div>
           ) : image ? (
-            <div className="relative w-full h-64">
+            <div className="relative w-full h-48 sm:h-64">
               <Image
                 src={image}
                 alt="Captured pollution"
@@ -170,7 +170,10 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
                 sizes="(max-width: 640px) 100vw, 500px"
               />
               <Button
-                onClick={() => setImage(null)}
+                onClick={() => {
+                  setImage(null);
+                  setImageFile(null);
+                }}
                 variant="destructive"
                 size="icon"
                 className="absolute top-2 right-2 z-10"

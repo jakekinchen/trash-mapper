@@ -54,7 +54,13 @@ export function Navbar() {
 
   return (
     <nav 
-      className="sticky top-0 z-50 w-full text-white shadow-md"
+      className="sticky top-0 z-50 w-full
+    px-4 py-2 
+    backdrop-blur-md
+    bg-white/60
+   text-white
+    border-b border-white/20
+    shadow-sm"
       style={{ backgroundColor: '#8FBC8F' }}
     >
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">

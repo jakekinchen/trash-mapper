@@ -122,6 +122,34 @@ export default function MyReportsPage() {
                     <span className="font-medium text-gray-700">Location:</span>&nbsp;{coordinates[1].toFixed(5)}, {coordinates[0].toFixed(5)}
                   </div>
                 </CardContent>
+                <div className="p-4 pt-0">
+                  <button
+                    className="delete-report-btn w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition"
+                    onClick={async () => {
+                      if (!window.confirm('Are you sure you want to delete this report?')) return;
+                      const btn = document.activeElement as HTMLButtonElement;
+                      btn.textContent = 'Deleting...';
+                      btn.disabled = true;
+                      try {
+                        const res = await fetch('/api/reports/delete', {
+                          method: 'DELETE',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ reportId: report.id })
+                        });
+                        const result = await res.json();
+                        if (!res.ok) throw new Error(result.error || 'Failed to delete');
+                        setReports((prev) => prev.filter(r => r.id !== report.id));
+                        toast({ title: 'Report deleted', description: 'Your report was removed.', variant: 'default' });
+                      } catch (err) {
+                        btn.textContent = 'Delete Report';
+                        btn.disabled = false;
+                        toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    Delete Report
+                  </button>
+                </div>
               </Card>
             );
           })}
