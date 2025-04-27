@@ -72,7 +72,11 @@ export function FloatingButtons() {
       <button 
         className="w-14 h-14 rounded-full bg-[#5B7CDE] flex items-center justify-center shadow-lg hover:bg-[#4A6ABD] transition-all floating-button"
         aria-label="Schedule"
-        onClick={() => router.push('/events')}
+        onClick={() => {
+          // Open the create event dialog modal directly (if on /)
+          const event = new CustomEvent('openCreateEventDialog')
+          window.dispatchEvent(event)
+        }}
       >
         <Calendar className="h-6 w-6 text-white" />
       </button>

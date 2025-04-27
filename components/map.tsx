@@ -7,6 +7,7 @@ import Script from "next/script"
 import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 import { getAllPollutionReports } from '@/lib/reports'
 import wkx from 'wkx'
+import { Filter } from 'lucide-react'
 
 // Types for our data
 interface TrashBin {
@@ -124,6 +125,7 @@ export default function MapComponent() {
   const [showPollutionMarkers, setShowPollutionMarkers] = useState(true)
   const [show311Data, setShow311Data] = useState(true)
   const [currentZoom, setCurrentZoom] = useState(13)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -725,35 +727,47 @@ export default function MapComponent() {
     <div className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
       <div ref={mapRef} className="w-full h-full z-0" />
       
-      {/* Layer visibility toggles */}
-      <div className="absolute top-4 left-4 z-10 bg-white p-2 rounded-md shadow-md space-y-2">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showPollutionMarkers}
-            onChange={(e) => setShowPollutionMarkers(e.target.checked)}
-            className="form-checkbox h-4 w-4 text-red-600"
-          />
-          <span className="text-sm font-medium">User Submitted Litter {currentZoom < 13 && "(zoom in to view)"}</span>
-        </label>
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={show311Data}
-            onChange={(e) => setShow311Data(e.target.checked)}
-            className="form-checkbox h-4 w-4 text-blue-600"
-          />
-          <span className="text-sm font-medium">311 Sourced Litter {currentZoom < 13 && "(zoom in to view)"}</span>
-        </label>
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showTrashBins}
-            onChange={(e) => setShowTrashBins(e.target.checked)}
-            className="form-checkbox h-4 w-4 text-green-600"
-          />
-          <span className="text-sm font-medium">Trash Bins {currentZoom < 14 && "(zoom in to view)"}</span>
-        </label>
+      {/* Layer visibility toggles as dropdown */}
+      <div className="absolute left-4 z-30 bg-white rounded-md shadow-md" style={{ top: `calc(1.5rem + env(safe-area-inset-top, 0px))`, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <button
+          className="flex items-center gap-2 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-100 rounded-t-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+        >
+          <Filter className="w-5 h-5" />
+          Filters
+        </button>
+        {filtersOpen && (
+          <div className="p-2 space-y-2">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPollutionMarkers}
+                onChange={(e) => setShowPollutionMarkers(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-red-600"
+              />
+              <span className="text-sm font-medium">User Submitted Litter {currentZoom < 13 && "(zoom in to view)"}</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={show311Data}
+                onChange={(e) => setShow311Data(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm font-medium">311 Sourced Litter {currentZoom < 13 && "(zoom in to view)"}</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showTrashBins}
+                onChange={(e) => setShowTrashBins(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-green-600"
+              />
+              <span className="text-sm font-medium">Trash Bins {currentZoom < 14 && "(zoom in to view)"}</span>
+            </label>
+          </div>
+        )}
       </div>
       
       {/* Report modal */}
