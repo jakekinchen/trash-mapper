@@ -10,13 +10,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { format } from 'date-fns'
 import { Calendar, Clock, MapPin, Users } from 'lucide-react'
 
-interface Props {
-  params: {
-    id: string
-  }
-}
-
-export default function EventPage({ params }: Props) {
+export default function EventPage({ params }: any) {
   const router = useRouter()
   const { toast } = useToast()
   const [event, setEvent] = useState<Event | null>(null)
