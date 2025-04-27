@@ -158,7 +158,7 @@ Return the result as a JSON object with severity (number) and is_valid_environme
 
     // 4. update severity and environment validation if AI succeeded
     if (analysis || environmentValidation) {
-      const updates: any = {}
+      const updates: { severity?: number; is_valid_environment?: boolean } = {}
       
       if (analysis) {
         const averageSeverity = Math.round((userSeverity + analysis.severity) / 2)
