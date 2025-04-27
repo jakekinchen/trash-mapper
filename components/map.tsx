@@ -10,9 +10,28 @@ import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 interface TrashBin {
   id: string
   location: [number, number] // [longitude, latitude]
-  name: string
-  capacity: string
+  name?: string
+  capacity?: string
   lastEmptied?: string
+  properties?: {
+    element_type?: string
+    osmid?: number
+    amenity?: string
+    check_date?: string
+    waste?: string
+    bus?: string
+    information?: string
+    colour?: string
+    covered?: string
+    material?: string
+    vending?: string
+    operator?: string
+    backrest?: string
+    'source:feature'?: string
+    'survey:date'?: string
+    indoor?: string
+    image?: string
+  }
 }
 
 interface PollutionReport {
@@ -47,6 +66,7 @@ export default function MapComponent() {
   const [isSubmittingReport, setIsSubmittingReport] = useState(false)
   const [isSubmissionSuccess, setIsSubmissionSuccess] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [showTrashBins, setShowTrashBins] = useState(true)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -69,22 +89,19 @@ export default function MapComponent() {
 
   // Fetch trash bin data
   useEffect(() => {
-    // This would be an API call in a real application
     const fetchTrashBins = async () => {
       try {
-        // Simulating API response - using Austin coordinates
-        const mockTrashBins: TrashBin[] = [
-          { id: "1", location: [-97.7431, 30.2672], name: "Downtown Bin", capacity: "High" },
-          { id: "2", location: [-97.75, 30.27], name: "Park Bin", capacity: "Medium", lastEmptied: "2023-04-15" },
-          {
-            id: "3",
-            location: [-97.74, 30.265],
-            name: "Street Corner Bin",
-            capacity: "Low",
-            lastEmptied: "2023-04-20",
-          },
-        ]
-        setTrashBins(mockTrashBins)
+        const response = await fetch('/austin_trash_bins.geojson')
+        const data = await response.json()
+        
+        // Transform GeoJSON features into TrashBin objects
+        const trashBins: TrashBin[] = data.features.map((feature: any) => ({
+          id: feature.properties.osmid?.toString() || Math.random().toString(),
+          location: feature.geometry.coordinates,
+          properties: feature.properties
+        }))
+        
+        setTrashBins(trashBins)
       } catch (error) {
         console.error("Error fetching trash bins:", error)
         toast({
@@ -307,54 +324,63 @@ export default function MapComponent() {
       }
       markersRef.current = []
 
-      // Add trash bin markers
-      trashBins.forEach((bin: TrashBin) => {
-        if (!bin || !bin.location || bin.location.length !== 2) return
+      // Only add markers if showTrashBins is true
+      if (showTrashBins) {
+        // Add trash bin markers
+        trashBins.forEach((bin: TrashBin) => {
+          if (!bin || !bin.location || bin.location.length !== 2) return
 
-        try {
-          const [longitude, latitude] = bin.location
+          try {
+            const [longitude, latitude] = bin.location
 
-          const trashIcon = window.L.divIcon({
-            html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-green-600"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
-            className: "trash-bin-marker",
-            iconSize: [24, 24],
-          })
+            const trashIcon = window.L.divIcon({
+              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-green-600"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+              className: "trash-bin-marker",
+              iconSize: [24, 24],
+            })
 
-          const marker = window.L.marker([latitude, longitude], { icon: trashIcon }).addTo(map)
+            const marker = window.L.marker([latitude, longitude], { icon: trashIcon }).addTo(map)
 
-          marker.bindPopup(() => {
-            const popupElement = document.createElement("div")
-            popupElement.innerHTML = `
-              <div class="p-1">
-                <h3 class="font-semibold text-base">${bin.name || "Trash Bin"}</h3>
-                <div class="grid grid-cols-2 gap-x-2 text-sm mt-1">
-                  <span class="text-muted-foreground">Capacity:</span>
-                  <span>${bin.capacity || "Unknown"}</span>
-                  ${
-                    bin.lastEmptied
-                      ? `
-                    <span class="text-muted-foreground">Last emptied:</span>
-                    <span>${new Date(bin.lastEmptied).toLocaleDateString()}</span>
-                  `
-                      : ""
-                  }
-                  <span class="text-muted-foreground">Coordinates:</span>
-                  <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
+            marker.bindPopup(() => {
+              const popupElement = document.createElement("div")
+              popupElement.innerHTML = `
+                <div class="p-1">
+                  <h3 class="font-semibold text-base">Trash Bin</h3>
+                  <div class="grid grid-cols-2 gap-x-2 text-sm mt-1">
+                    ${bin.properties?.check_date ? `
+                      <span class="text-muted-foreground">Last checked:</span>
+                      <span>${new Date(bin.properties.check_date).toLocaleDateString()}</span>
+                    ` : ''}
+                    ${bin.properties?.waste ? `
+                      <span class="text-muted-foreground">Type:</span>
+                      <span>${bin.properties.waste}</span>
+                    ` : ''}
+                    ${bin.properties?.material ? `
+                      <span class="text-muted-foreground">Material:</span>
+                      <span>${bin.properties.material}</span>
+                    ` : ''}
+                    ${bin.properties?.covered ? `
+                      <span class="text-muted-foreground">Covered:</span>
+                      <span>${bin.properties.covered}</span>
+                    ` : ''}
+                    <span class="text-muted-foreground">Coordinates:</span>
+                    <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
+                  </div>
                 </div>
-              </div>
-            `
-            return popupElement
-          })
+              `
+              return popupElement
+            })
 
-          markersRef.current.push(marker)
-        } catch (error) {
-          console.error("Error adding trash bin marker:", error)
-        }
-      })
+            markersRef.current.push(marker)
+          } catch (error) {
+            console.error("Error adding trash bin marker:", error)
+          }
+        })
+      }
     } catch (error) {
       console.error("Error adding trash bin markers:", error)
     }
-  }, [mapLoaded, trashBins])
+  }, [mapLoaded, trashBins, showTrashBins])
 
   // Add pollution data
   useEffect(() => {
@@ -577,6 +603,19 @@ export default function MapComponent() {
   return (
     <div className="relative w-full h-full" id="map-component">
       <div ref={mapRef} className="w-full h-full z-0" />
+      
+      {/* Trash bin visibility toggle */}
+      <div className="absolute top-4 right-4 z-10 bg-white p-2 rounded-md shadow-md">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showTrashBins}
+            onChange={(e) => setShowTrashBins(e.target.checked)}
+            className="form-checkbox h-4 w-4 text-green-600"
+          />
+          <span className="text-sm font-medium">Show Trash Bins</span>
+        </label>
+      </div>
       
       {/* Report modal */}
       <ReportModal
