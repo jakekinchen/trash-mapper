@@ -145,6 +145,13 @@ export default function MapComponent() {
     fetchPollutionData()
   }, [toast])
 
+  // Ensure mapLoaded is true if window.L is already available (for client navigation)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.L && !mapLoaded) {
+      setMapLoaded(true)
+    }
+  }, [mapLoaded])
+
   // Initialize map after scripts are loaded
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || !window.L) return
