@@ -720,16 +720,7 @@ export default function MapComponent() {
       <div ref={mapRef} className="w-full h-full z-0" />
       
       {/* Layer visibility toggles */}
-      <div className="absolute top-4 right-4 z-10 bg-white p-2 rounded-md shadow-md space-y-2">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showTrashBins}
-            onChange={(e) => setShowTrashBins(e.target.checked)}
-            className="form-checkbox h-4 w-4 text-green-600"
-          />
-          <span className="text-sm font-medium">Trash Bins</span>
-        </label>
+      <div className="absolute top-4 left-4 z-10 bg-white p-2 rounded-md shadow-md space-y-2">
         <label className="flex items-center space-x-2 cursor-pointer">
           <input
             type="checkbox"
@@ -747,6 +738,15 @@ export default function MapComponent() {
             className="form-checkbox h-4 w-4 text-blue-600"
           />
           <span className="text-sm font-medium">311 Sourced Litter</span>
+        </label>
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showTrashBins}
+            onChange={(e) => setShowTrashBins(e.target.checked)}
+            className="form-checkbox h-4 w-4 text-green-600"
+          />
+          <span className="text-sm font-medium">Trash Bins</span>
         </label>
       </div>
       
