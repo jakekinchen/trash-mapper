@@ -541,6 +541,7 @@ export default function MapComponent() {
                 0.8: "yellow",
                 1.0: "red",
               },
+              minOpacity: 0.5,
             };
             const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer;
 
