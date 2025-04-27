@@ -53,7 +53,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
         const imageSrc = webcamRef.current.getScreenshot()
         if (imageSrc) {
           setImage(imageSrc)
-          
+          setIsCapturing(false) // <-- Hide camera and show preview after capture
           // Convert base64 to file
           fetch(imageSrc)
             .then(res => res.blob())
