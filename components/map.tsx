@@ -123,6 +123,7 @@ export default function MapComponent() {
   const [showTrashBins, setShowTrashBins] = useState(false)
   const [showPollutionMarkers, setShowPollutionMarkers] = useState(true)
   const [show311Data, setShow311Data] = useState(true)
+  const [currentZoom, setCurrentZoom] = useState(13)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -261,6 +262,11 @@ export default function MapComponent() {
         zoomControl: false, // We'll add zoom controls in a better position for mobile
       }).setView([30.2672, -97.7431], 13)
       mapInstanceRef.current = map
+
+      // Add zoom level change listener
+      map.on('zoomend', () => {
+        setCurrentZoom(map.getZoom())
+      })
 
       // Add custom positioned zoom controls that work better on mobile
       window.L.control
@@ -405,8 +411,8 @@ export default function MapComponent() {
       }
       trashBinMarkersRef.current = []
 
-      // Only add markers if showTrashBins is true
-      if (showTrashBins) {
+      // Only add markers if showTrashBins is true and zoom level is appropriate
+      if (showTrashBins && currentZoom >= 14) {
         // Add trash bin markers
         trashBins.forEach((bin: TrashBin) => {
           if (!bin || !bin.location || bin.location.length !== 2) return
@@ -461,7 +467,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding trash bin markers:", error)
     }
-  }, [mapLoaded, trashBins, showTrashBins])
+  }, [mapLoaded, trashBins, showTrashBins, currentZoom])
 
   // Add pollution data
   useEffect(() => {
@@ -480,8 +486,8 @@ export default function MapComponent() {
       }
       pollutionMarkersRef.current = []
 
-      // Only add markers if showPollutionMarkers is true
-      if (showPollutionMarkers) {
+      // Only add markers if showPollutionMarkers is true and zoom level is appropriate
+      if (showPollutionMarkers && currentZoom >= 13) {
         // Add pollution markers (showing user reports with images and 311 reports)
         const validReports = pollutionData.filter(
           (report: PollutionReport) =>
@@ -624,7 +630,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     const reportLocation = userLocation || [-97.7431, 30.2672]; 
@@ -728,7 +734,7 @@ export default function MapComponent() {
             onChange={(e) => setShowPollutionMarkers(e.target.checked)}
             className="form-checkbox h-4 w-4 text-red-600"
           />
-          <span className="text-sm font-medium">User Submitted Litter</span>
+          <span className="text-sm font-medium">User Submitted Litter {currentZoom < 13 && "(zoom in to view)"}</span>
         </label>
         <label className="flex items-center space-x-2 cursor-pointer">
           <input
@@ -737,7 +743,7 @@ export default function MapComponent() {
             onChange={(e) => setShow311Data(e.target.checked)}
             className="form-checkbox h-4 w-4 text-blue-600"
           />
-          <span className="text-sm font-medium">311 Sourced Litter</span>
+          <span className="text-sm font-medium">311 Sourced Litter {currentZoom < 13 && "(zoom in to view)"}</span>
         </label>
         <label className="flex items-center space-x-2 cursor-pointer">
           <input
@@ -746,7 +752,7 @@ export default function MapComponent() {
             onChange={(e) => setShowTrashBins(e.target.checked)}
             className="form-checkbox h-4 w-4 text-green-600"
           />
-          <span className="text-sm font-medium">Trash Bins</span>
+          <span className="text-sm font-medium">Trash Bins {currentZoom < 14 && "(zoom in to view)"}</span>
         </label>
       </div>
       
