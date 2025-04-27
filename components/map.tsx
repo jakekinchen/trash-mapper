@@ -44,6 +44,38 @@ interface PollutionReport {
   timestamp: string
 }
 
+interface GeoJSONFeature {
+  type: string
+  properties: {
+    element_type?: string
+    osmid?: number
+    amenity?: string
+    check_date?: string
+    waste?: string
+    bus?: string
+    information?: string
+    colour?: string
+    covered?: string
+    material?: string
+    vending?: string
+    operator?: string
+    backrest?: string
+    'source:feature'?: string
+    'survey:date'?: string
+    indoor?: string
+    image?: string
+  }
+  geometry: {
+    type: string
+    coordinates: [number, number]
+  }
+}
+
+interface GeoJSONData {
+  type: string
+  features: GeoJSONFeature[]
+}
+
 // Define a simple interface for the options used by leaflet.heat
 interface SimpleHeatOptions {
   radius?: number;
@@ -92,10 +124,10 @@ export default function MapComponent() {
     const fetchTrashBins = async () => {
       try {
         const response = await fetch('/austin_trash_bins.geojson')
-        const data = await response.json()
+        const data: GeoJSONData = await response.json()
         
         // Transform GeoJSON features into TrashBin objects
-        const trashBins: TrashBin[] = data.features.map((feature: any) => ({
+        const trashBins: TrashBin[] = data.features.map((feature: GeoJSONFeature) => ({
           id: feature.properties.osmid?.toString() || Math.random().toString(),
           location: feature.geometry.coordinates,
           properties: feature.properties
