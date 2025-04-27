@@ -98,14 +98,14 @@ export default function EventsPage() {
       </div>
       
       <Tabs defaultValue="community" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-3 gap-4 p-0">
           {isAuthenticated && (
             <>
-              <TabsTrigger value="my">My Events</TabsTrigger>
-              <TabsTrigger value="joined">Joined Events</TabsTrigger>
+              <TabsTrigger value="my" className="w-full">My Events</TabsTrigger>
+              <TabsTrigger value="joined" className="w-full">Joined Events</TabsTrigger>
             </>
           )}
-          <TabsTrigger value="community" className={isAuthenticated ? '' : 'col-span-3'}>
+          <TabsTrigger value="community" className={`w-full ${isAuthenticated ? '' : 'col-span-3'}`}>
             Community Events
           </TabsTrigger>
         </TabsList>

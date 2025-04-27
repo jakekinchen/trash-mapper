@@ -75,35 +75,41 @@ export function Navbar() {
                   <Menu strokeWidth={3} style={{ width: '32px', height: '32px' }} />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right">
+              <SheetContent side="right" className="rounded-lg">
                 <SheetHeader>
                   <SheetTitle>Menu</SheetTitle>
                   <SheetDescription>
                     Navigate through your account sections.
                   </SheetDescription>
                 </SheetHeader>
-                <div className="grid gap-4 py-4">
+                <div className="py-4">
+                  <nav className="flex flex-col gap-2">
+                    <SheetClose asChild>
+                      <Link href="/profile" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
+                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        Profile
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Link href="/reports" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
+                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a4 4 0 118 0v2M12 11a4 4 0 100-8 4 4 0 000 8z" /></svg>
+                        Reports
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Link href="/events" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Events
+                      </Link>
+                    </SheetClose>
+                  </nav>
+                  <div className="my-6 border-t border-gray-200" />
                   <SheetClose asChild>
-                     <Link href="/profile" className="text-sm font-medium hover:underline">
-                      Profile
-                    </Link>
-                  </SheetClose>
-                   <SheetClose asChild>
-                    <Link href="/reports" className="text-sm font-medium hover:underline">
-                      Reports
-                    </Link>
-                  </SheetClose>
-                   <SheetClose asChild>
-                    <Link href="/events" className="text-sm font-medium hover:underline">
-                      Events
-                    </Link>
+                    <Button onClick={handleLogout} variant="destructive" className="w-full flex items-center justify-center gap-2 py-3 text-base font-semibold rounded-lg shadow-sm">
+                      <LogOut className="h-5 w-5" /> Logout
+                    </Button>
                   </SheetClose>
                 </div>
-                <SheetClose asChild>
-                  <Button onClick={handleLogout} variant="outline" className="w-full mt-4">
-                     <LogOut className="mr-2 h-4 w-4" /> Logout
-                  </Button>
-                </SheetClose>
               </SheetContent>
             </Sheet>
           ) : (
