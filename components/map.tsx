@@ -53,6 +53,7 @@ interface PollutionReport {
   description?: string
   imageUrl?: string
   timestamp: string
+  cleaned_up: boolean
 }
 
 interface GeoJSONFeature {
@@ -191,6 +192,7 @@ export default function MapComponent() {
             description: "", // Add description field if needed
             imageUrl: report.image_url,
             timestamp: report.created_at,
+            cleaned_up: false,
           };
         });
         
@@ -611,6 +613,7 @@ export default function MapComponent() {
         description: data.description, 
         imageUrl: result.imageUrl,
         timestamp: new Date().toISOString(), 
+        cleaned_up: false,
       };
       setPollutionData((prev: PollutionReport[]) => [...prev, newReport]);
 

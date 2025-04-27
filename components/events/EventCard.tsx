@@ -11,6 +11,7 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onClick }: EventCardProps) {
+  console.log(event.location)
   return (
     <Card 
       className="cursor-pointer hover:shadow-xl transition-shadow border-2 border-gray-100 rounded-2xl overflow-hidden bg-white"

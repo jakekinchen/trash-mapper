@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { MapPin, AlertTriangle } from 'lucide-react';
+import { MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 // Define the structure of a report based on your database schema
 interface Report {
@@ -16,6 +16,7 @@ interface Report {
   severity: number;
   created_at: string;
   image_url: string;
+  cleaned_up: boolean;
 }
 
 export default function MyReportsPage() {
@@ -85,6 +86,11 @@ export default function MyReportsPage() {
                 <CardTitle className="text-lg font-semibold mb-1">Report - {format(new Date(report.created_at), 'PPp')}</CardTitle>
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-opacity-20 ${report.severity >= 4 ? 'bg-red-100 text-red-700' : report.severity >= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}> <AlertTriangle className="mr-1 h-4 w-4" /> {getSeverityText(report.severity)} ({report.severity}/5)</span>
+                  {report.cleaned_up && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                      <CheckCircle2 className="mr-1 h-4 w-4" /> Cleaned Up
+                    </span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -105,7 +111,6 @@ export default function MyReportsPage() {
                   <span className="font-medium text-gray-700">Location:</span>&nbsp;{report.geom?.coordinates?.[1]?.toFixed(5)}, {report.geom?.coordinates?.[0]?.toFixed(5)}
                 </div>
               </CardContent>
-              {/* Optional Footer could go here */}
             </Card>
           ))}
         </div>

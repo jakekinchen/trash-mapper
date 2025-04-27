@@ -9,6 +9,7 @@ interface PollutionInfoProps {
     imageUrl?: string
     timestamp: string
     location: [number, number]
+    cleaned_up: boolean
   }
 }
 
@@ -36,7 +37,12 @@ export default function PollutionInfo({ report }: PollutionInfoProps) {
     <div className="p-1 max-w-xs">
       <div className="flex justify-between items-start">
         <h3 className="font-semibold text-base">Pollution Report</h3>
-        <span className={`font-bold ${getSeverityColor(report.severity)}`}>{report.severity}/5</span>
+        <div className="flex items-center gap-2">
+          {report.cleaned_up && (
+            <span className="text-green-600 text-sm font-medium">Cleaned Up</span>
+          )}
+          <span className={`font-bold ${getSeverityColor(report.severity)}`}>{report.severity}/5</span>
+        </div>
       </div>
 
       {report.imageUrl && (

@@ -1,8 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export function createClient() {
-  const cookieStore = cookies()
+export async function createClient() {
+  const cookieStore = await cookies()
 
   // Create a server client configured to use cookies
   return createServerClient(
@@ -11,12 +11,10 @@ export function createClient() {
     {
       cookies: {
         get(name: string) {
-          // @ts-expect-error Linter incorrectly thinks cookieStore is a Promise
           return cookieStore.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            // @ts-expect-error Linter incorrectly thinks cookieStore is a Promise
             cookieStore.set({ name, value, ...options })
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (_error) { // Prefix unused variable with underscore
@@ -27,7 +25,6 @@ export function createClient() {
         },
         remove(name: string, options: CookieOptions) {
           try {
-            // @ts-expect-error Linter incorrectly thinks cookieStore is a Promise
             cookieStore.set({ name, value: '', ...options })
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (_error) { // Prefix unused variable with underscore

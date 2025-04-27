@@ -11,7 +11,7 @@ const ReportAnalysis = z.object({
   })
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         geom: `POINT(${lon} ${lat})`,
         image_url: publicUrl,
         severity: userSeverity,
+        cleaned_up: false,
       })
       .select('id')
       .single()
