@@ -17,9 +17,12 @@ export async function getMyReports() {
     throw error;
   }
 
-  // Assuming the report type includes all fields fetched
-  // You might need to define a Report type in types/index.ts
-  return data;
+  // Filter out reports with is_valid_environment === false
+  const filteredData = Array.isArray(data)
+    ? data.filter((report: any) => report.is_valid_environment !== false)
+    : [];
+
+  return filteredData;
 }
 
 export async function getAllPollutionReports() {

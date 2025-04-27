@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { MapPin, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import wkx from 'wkx';
 
 // Define the structure of a report based on your database schema
@@ -18,19 +18,34 @@ interface Report {
   created_at: string;
   image_url: string;
   cleaned_up: boolean;
+  is_valid_environment?: boolean;
 }
 
 export default function MyReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const data = await getMyReports();
-        setReports(data);
+        const validReports = Array.isArray(data)
+          ? data.filter((report: any) => report.is_valid_environment !== false)
+          : [];
+        setReports(validReports);
+        if (Array.isArray(data)) {
+          const rejectedCount = data.filter((r: any) => r.is_valid_environment === false).length;
+          if (rejectedCount > 0) {
+            toast({
+              title: "Report Rejected",
+              description: `${rejectedCount} report${rejectedCount > 1 ? 's were' : ' was'} rejected due to invalid environment.`,
+              variant: "destructive",
+            });
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch reports');
         toast({
@@ -57,6 +72,27 @@ export default function MyReportsPage() {
     }
   };
 
+  const handleDelete = async (reportId: string) => {
+    if (!window.confirm('Are you sure you want to delete this report?')) return;
+
+    setDeletingReportId(reportId);
+    try {
+      const res = await fetch('/api/reports/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId: reportId })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to delete');
+      setReports((prev) => prev.filter(r => r.id !== reportId));
+      toast({ title: 'Report deleted', description: 'Your report was removed.', variant: 'default' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setDeletingReportId(null);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">My Reports</h1>
@@ -78,6 +114,7 @@ export default function MyReportsPage() {
       {!loading && !error && reports.length > 0 && (
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {reports.map((report) => {
+            const isDeleting = deletingReportId === report.id;
             // Parse the WKB data to get coordinates
             let coordinates: [number, number] = [0, 0];
             try {
@@ -92,7 +129,12 @@ export default function MyReportsPage() {
             }
 
             return (
-              <Card key={report.id} className="shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-100 rounded-2xl overflow-hidden bg-white">
+              <Card key={report.id} className={`shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-100 rounded-2xl overflow-hidden bg-white relative ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+                {isDeleting && (
+                  <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 rounded-2xl">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+                  </div>
+                )}
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg font-semibold mb-1">Report - {format(new Date(report.created_at), 'PPp')}</CardTitle>
                   <div className="flex items-center gap-2 mb-1">
@@ -124,30 +166,15 @@ export default function MyReportsPage() {
                 </CardContent>
                 <div className="p-4 pt-0">
                   <button
-                    className="delete-report-btn w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition"
-                    onClick={async () => {
-                      if (!window.confirm('Are you sure you want to delete this report?')) return;
-                      const btn = document.activeElement as HTMLButtonElement;
-                      btn.textContent = 'Deleting...';
-                      btn.disabled = true;
-                      try {
-                        const res = await fetch('/api/reports/delete', {
-                          method: 'DELETE',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ reportId: report.id })
-                        });
-                        const result = await res.json();
-                        if (!res.ok) throw new Error(result.error || 'Failed to delete');
-                        setReports((prev) => prev.filter(r => r.id !== report.id));
-                        toast({ title: 'Report deleted', description: 'Your report was removed.', variant: 'default' });
-                      } catch (err) {
-                        btn.textContent = 'Delete Report';
-                        btn.disabled = false;
-                        toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to delete', variant: 'destructive' });
-                      }
-                    }}
+                    className={`delete-report-btn w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition flex items-center justify-center ${isDeleting ? 'cursor-not-allowed' : ''}`}
+                    onClick={() => handleDelete(report.id)}
+                    disabled={isDeleting}
                   >
-                    Delete Report
+                    {isDeleting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+                    ) : (
+                      'Delete Report'
+                    )}
                   </button>
                 </div>
               </Card>

@@ -127,7 +127,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-w-[95vw] p-2 sm:p-6 max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-w-[95vw] p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report Pollution</DialogTitle>
           <DialogDescription>

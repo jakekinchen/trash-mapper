@@ -45,6 +45,7 @@ interface SupabaseReport {
   severity: number;
   created_at: string;
   image_url: string;
+  is_valid_environment: boolean;
 }
 
 interface PollutionReport {
@@ -184,8 +185,13 @@ export default function MapComponent() {
         // Fetch user reports from Supabase
         const reports = await getAllPollutionReports();
         
+        // Filter out reports with is_valid_environment === false (defensive, in case API changes)
+        const validReports = Array.isArray(reports)
+          ? reports.filter((report: any) => report.is_valid_environment !== false)
+          : [];
+        
         // Transform Supabase reports into PollutionReport format
-        const userReports: PollutionReport[] = reports.map((report: SupabaseReport) => {
+        const userReports: PollutionReport[] = validReports.map((report: SupabaseReport) => {
           // Extract coordinates from the geom field
           let coordinates: [number, number] = [0, 0];
           if (report.geom) {
