@@ -7,6 +7,7 @@ import Script from "next/script"
 import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 import { getAllPollutionReports } from '@/lib/reports'
 import wkx from 'wkx'
+import Papa from 'papaparse'
 
 // Types for our data
 interface TrashBin {
@@ -86,6 +87,13 @@ interface GeoJSONFeature {
 interface GeoJSONData {
   type: string
   features: GeoJSONFeature[]
+}
+
+interface CSVRow {
+  'Created Date': string;
+  'Latitude Coordinate': string;
+  'Longitude Coordinate': string;
+  '(Latitude.Longitude)': string;
 }
 
 // Define a simple interface for the options used by leaflet.heat
@@ -208,6 +216,41 @@ export default function MapComponent() {
     };
 
     fetchPollutionData();
+  }, [toast]);
+
+  // Load 311 data from CSV
+  useEffect(() => {
+    const load311Data = async () => {
+      try {
+        const response = await fetch('/filtered_311_data.csv');
+        const csvText = await response.text();
+        
+        Papa.parse<CSVRow>(csvText, {
+          header: true,
+          complete: (results) => {
+            const new311Reports: PollutionReport[] = results.data.map((row) => ({
+              id: `311-${row['Created Date']}-${row['Latitude Coordinate']}-${row['Longitude Coordinate']}`,
+              location: [parseFloat(row['Longitude Coordinate']), parseFloat(row['Latitude Coordinate'])],
+              type: "311" as const,
+              severity: 3, // Default severity for 311 reports
+              timestamp: row['Created Date'],
+              cleaned_up: false
+            }));
+            
+            setPollutionData(prev => [...prev, ...new311Reports]);
+          }
+        });
+      } catch (error) {
+        console.error('Error loading 311 data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load 311 data",
+          variant: "destructive",
+        });
+      }
+    };
+
+    load311Data();
   }, [toast]);
 
   // Ensure mapLoaded is true if window.L is already available (for client navigation)
@@ -449,10 +492,13 @@ export default function MapComponent() {
 
       // Only add markers if showPollutionMarkers is true
       if (showPollutionMarkers) {
-        // Add pollution markers (only showing user reports with images)
+        // Add pollution markers (showing user reports with images and 311 reports)
         const validReports = pollutionData.filter(
           (report: PollutionReport) =>
-            report && report.type === "user" && report.imageUrl && report.location && report.location.length === 2,
+            report && 
+            report.location && 
+            report.location.length === 2 &&
+            ((report.type === "user" && report.imageUrl) || report.type === "311")
         );
 
         validReports.forEach((report: PollutionReport) => {
@@ -460,7 +506,7 @@ export default function MapComponent() {
             const [longitude, latitude] = report.location;
 
             const pollutionIcon = window.L.divIcon({
-              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 text-red-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+              html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="h-6 w-6 ${report.type === "311" ? "text-blue-500" : "text-red-500"}"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
               className: "pollution-marker",
               iconSize: [24, 24],
             });
@@ -546,7 +592,14 @@ export default function MapComponent() {
           if (leafletWithHeat.heatLayer) {
             // Make sure each report has valid location data
             const validReports = pollutionData.filter(
-              (report: PollutionReport) => report && report.location && report.location.length === 2,
+              (report: PollutionReport) => 
+                report && 
+                report.location && 
+                report.location.length === 2 &&
+                !isNaN(report.location[0]) && 
+                !isNaN(report.location[1]) &&
+                report.location[0] !== 0 && 
+                report.location[1] !== 0
             );
 
             const heatData: LatLngTuple[] = validReports.map((report: PollutionReport) => {
