@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from "openai";
 import { z } from "zod";
 import { createClient } from '@/lib/supabaseServer'
+import sharp from 'sharp';
 
 const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
 
@@ -33,22 +34,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'image/bmp',
+      'image/tiff',
+      'image/heic',
+      'image/heif',
+      'image/avif'
+    ]
     if (!allowedTypes.includes(image.type)) {
       return NextResponse.json(
-        { error: 'Unsupported file type. Please upload a JPEG, PNG, or WebP image.' },
+        { error: 'Unsupported file type. Please upload a JPEG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF, or AVIF image.' },
         { status: 400 },
       )
     }
 
-    // 1. upload image (Buffer is Node-friendly)
-    const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}`
+    // Optimize image using Sharp
+    const imageBuffer = Buffer.from(await image.arrayBuffer());
+    const optimizedImageBuffer = await sharp(imageBuffer)
+      .resize(768, 768, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    // 1. upload optimized image
+    const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}.webp`
     const { error: uploadError } = await supabase.storage
       .from('report-images')
       .upload(
         fileName,
-        Buffer.from(await image.arrayBuffer()),
-        { contentType: image.type },
+        optimizedImageBuffer,
+        { contentType: 'image/webp' },
       )
 
     if (uploadError) {
