@@ -7,7 +7,6 @@ import Script from "next/script"
 import L, { Map as LeafletMap, Marker, LatLngTuple, Layer } from 'leaflet'
 import { getAllPollutionReports } from '@/lib/reports'
 import wkx from 'wkx'
-import Papa from 'papaparse'
 
 // Types for our data
 interface TrashBin {
@@ -89,11 +88,14 @@ interface GeoJSONData {
   features: GeoJSONFeature[]
 }
 
-interface CSVRow {
-  'Created Date': string;
-  'Latitude Coordinate': string;
-  'Longitude Coordinate': string;
-  '(Latitude.Longitude)': string;
+// Add new interface for 311 API response
+interface Austin311Report {
+  sr_type_desc: string;
+  sr_created_date: string;
+  sr_closed_date: string | null;
+  sr_location_lat: string;
+  sr_location_long: string;
+  sr_location_lat_long: string;
 }
 
 // Define a simple interface for the options used by leaflet.heat
@@ -170,14 +172,15 @@ export default function MapComponent() {
     fetchTrashBins()
   }, [toast])
 
-  // Fetch pollution data
+  // Fetch pollution data and 311 data
   useEffect(() => {
-    const fetchPollutionData = async () => {
+    const fetchAllPollutionData = async () => {
       try {
+        // Fetch user reports from Supabase
         const reports = await getAllPollutionReports();
         
         // Transform Supabase reports into PollutionReport format
-        const pollutionData: PollutionReport[] = reports.map((report: SupabaseReport) => {
+        const userReports: PollutionReport[] = reports.map((report: SupabaseReport) => {
           // Extract coordinates from the geom field
           let coordinates: [number, number] = [0, 0];
           if (report.geom) {
@@ -204,8 +207,29 @@ export default function MapComponent() {
             cleaned_up: false,
           };
         });
+
+        // Fetch 311 data
+        const response = await fetch('https://data.austintexas.gov/resource/xwdj-i9he.json?$query=SELECT%0A%20%20%60sr_type_desc%60%2C%0A%20%20%60sr_created_date%60%2C%0A%20%20%60sr_closed_date%60%2C%0A%20%20%60sr_location_lat%60%2C%0A%20%20%60sr_location_long%60%2C%0A%20%20%60sr_location_lat_long%60%0AWHERE%0A%20%20caseless_one_of(%0A%20%20%20%20%60sr_type_desc%60%2C%0A%20%20%20%20%22Debris%20in%20Street%22%2C%0A%20%20%20%20%22TPW%20-%20Debris%20in%20Street%22%2C%20%20%20%20%22WPD%20-%20Lady%20Bird%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22SBO%20-%20Debris%20in%20Street%22%2C%0A%20%20%20%20%22Town%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22ARR%20-%20Garbage%22%2C%0A%20%20%20%20%22ARR%20-%20Spillage%20Trash%2FFluids%22%0A%20%20)%0A%20%20AND%20%60sr_closed_date%60%20IS%20NULL%0A%20%20AND%20(%60sr_created_date%60%20%3E%20%222025-01-01T00%3A00%3A00%22%20%3A%3A%20floating_timestamp)');
+        const data: Austin311Report[] = await response.json();
         
-        setPollutionData(pollutionData);
+        const new311Reports: PollutionReport[] = data
+          .filter(report => {
+            const lat = parseFloat(report.sr_location_lat);
+            const lon = parseFloat(report.sr_location_long);
+            return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
+          })
+          .map((report) => ({
+            id: `311-${report.sr_created_date}-${report.sr_location_lat}-${report.sr_location_long}`,
+            location: [parseFloat(report.sr_location_long), parseFloat(report.sr_location_lat)],
+            type: "311" as const,
+            severity: 3, // Default severity for 311 reports
+            timestamp: report.sr_created_date,
+            cleaned_up: false,
+            description: report.sr_type_desc
+          }));
+        
+        // Combine both data sources
+        setPollutionData([...userReports, ...new311Reports]);
       } catch (error) {
         console.error("Error fetching pollution data:", error);
         toast({
@@ -216,48 +240,7 @@ export default function MapComponent() {
       }
     };
 
-    fetchPollutionData();
-  }, [toast]);
-
-  // Load 311 data from CSV
-  useEffect(() => {
-    const load311Data = async () => {
-      try {
-        const response = await fetch('/filtered_311_data.csv');
-        const csvText = await response.text();
-        
-        Papa.parse<CSVRow>(csvText, {
-          header: true,
-          complete: (results) => {
-            const new311Reports: PollutionReport[] = results.data
-              .filter(row => {
-                const lat = parseFloat(row['Latitude Coordinate']);
-                const lon = parseFloat(row['Longitude Coordinate']);
-                return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
-              })
-              .map((row) => ({
-                id: `311-${row['Created Date']}-${row['Latitude Coordinate']}-${row['Longitude Coordinate']}`,
-                location: [parseFloat(row['Longitude Coordinate']), parseFloat(row['Latitude Coordinate'])],
-                type: "311" as const,
-                severity: 3, // Default severity for 311 reports
-                timestamp: row['Created Date'],
-                cleaned_up: false
-              }));
-            
-            setPollutionData(prev => [...prev, ...new311Reports]);
-          }
-        });
-      } catch (error) {
-        console.error('Error loading 311 data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load 311 data",
-          variant: "destructive",
-        });
-      }
-    };
-
-    load311Data();
+    fetchAllPollutionData();
   }, [toast]);
 
   // Ensure mapLoaded is true if window.L is already available (for client navigation)
