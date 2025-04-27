@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(image.type)) {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Please upload a JPEG, PNG, or WebP image.' },
+        { status: 400 },
+      )
+    }
+
     // 1. upload image (Buffer is Node-friendly)
     const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}`
     const { error: uploadError } = await supabase.storage
@@ -80,7 +89,7 @@ export async function POST(request: NextRequest) {
     let analysis: z.infer<typeof ReportAnalysis> | null = null
     try {
       const resp = await openai.chat.completions.create({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-4o',
         messages: [
           { 
             role: 'system', 
