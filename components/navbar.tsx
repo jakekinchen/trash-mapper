@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
 import { TrashIcon } from './trash-icon'
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut, Map } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -24,6 +25,7 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const pathname = usePathname()
   const { isDrawerOpen, setIsDrawerOpen } = useDrawer()
 
   useEffect(() => {
@@ -102,6 +104,16 @@ export function Navbar() {
                         Events
                       </Link>
                     </SheetClose>
+                    {
+                      pathname !== '/' && (
+                        <SheetClose asChild>
+                          <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
+                            <Map className="w-5 h-5 text-blue-600" />
+                            Map
+                          </Link>
+                        </SheetClose>
+                      )
+                    }
                   </nav>
                   <div className="my-6 border-t border-gray-200" />
                   <SheetClose asChild>
