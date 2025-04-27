@@ -62,7 +62,7 @@ export function FloatingButtons() {
       isDrawerOpen ? "opacity-0 pointer-events-none" : "opacity-100"
     )}>
       <button 
-        className="w-14 h-14 rounded-full bg-[#8FBC8F] flex items-center justify-center shadow-lg hover:bg-[#6B8E6B] transition-all floating-button"
+        className="w-14 h-14 rounded-full bg-[#6a8c6a] flex items-center justify-center shadow-lg hover:bg-[#465c46] transition-all floating-button"
         aria-label="Take photo"
         onClick={openReportModal}
       >

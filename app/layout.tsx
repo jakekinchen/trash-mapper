@@ -40,7 +40,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
           <DrawerProvider>
             <Navbar />
-            <main className="page-transition">
+            <main className="page-transition h-[calc(100vh-4.5rem)]">
               {children}
             </main>
             <FloatingButtons />

@@ -24,7 +24,7 @@ export default function Home() {
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>
 
   return (
-    <main className="h-screen w-full relative">
+    <main className="w-full relative">
       <Map />
       <Toaster />
       <MobileOptimizations />

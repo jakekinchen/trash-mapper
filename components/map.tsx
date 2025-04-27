@@ -230,14 +230,14 @@ export default function MapComponent() {
       // Add custom positioned zoom controls that work better on mobile
       window.L.control
         .zoom({
-          position: "bottomright",
+          position: "bottomleft",
         })
         .addTo(map)
 
       // Add attribution in a better position for mobile
       window.L.control
         .attribution({
-          position: "bottomleft",
+          position: "bottomright",
         })
         .addTo(map)
 
@@ -659,7 +659,7 @@ export default function MapComponent() {
   }, [])
 
   return (
-    <div className="relative w-full h-full" id="map-component">
+    <div className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
       <div ref={mapRef} className="w-full h-full z-0" />
       
       {/* Layer visibility toggles */}
