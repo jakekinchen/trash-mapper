@@ -212,7 +212,20 @@ export default function MapComponent() {
         });
 
         // Fetch 311 data
-        const response = await fetch('https://data.austintexas.gov/resource/xwdj-i9he.json?$query=SELECT%0A%20%20%60sr_type_desc%60%2C%0A%20%20%60sr_created_date%60%2C%0A%20%20%60sr_closed_date%60%2C%0A%20%20%60sr_location_lat%60%2C%0A%20%20%60sr_location_long%60%2C%0A%20%20%60sr_location_lat_long%60%0AWHERE%0A%20%20caseless_one_of(%0A%20%20%20%20%60sr_type_desc%60%2C%0A%20%20%20%20%22Debris%20in%20Street%22%2C%0A%20%20%20%20%22TPW%20-%20Debris%20in%20Street%22%2C%20%20%20%20%22WPD%20-%20Lady%20Bird%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22SBO%20-%20Debris%20in%20Street%22%2C%0A%20%20%20%20%22Town%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22ARR%20-%20Garbage%22%2C%0A%20%20%20%20%22ARR%20-%20Spillage%20Trash%2FFluids%22%0A%20%20)%0A%20%20AND%20%60sr_closed_date%60%20IS%20NULL%0A%20%20AND%20(%60sr_created_date%60%20%3E%20%222025-01-01T00%3A00%3A00%22%20%3A%3A%20floating_timestamp)');
+        // Calculate 1 month ago from now in ISO string
+        const now = new Date();
+        const oneMonthAgo = new Date(now);
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        const isoOneMonthAgo = oneMonthAgo.toISOString().split(".")[0]; // Remove milliseconds for query
+        const isoNow = now.toISOString().split(".")[0];
+        
+        const query =
+          'SELECT%0A%20%20%60sr_type_desc%60%2C%0A%20%20%60sr_created_date%60%2C%0A%20%20%60sr_closed_date%60%2C%0A%20%20%60sr_location_lat%60%2C%0A%20%20%60sr_location_long%60%2C%0A%20%20%60sr_location_lat_long%60%0AWHERE%0A%20%20caseless_one_of(%0A%20%20%20%20%60sr_type_desc%60%2C%0A%20%20%20%20%22Debris%20in%20Street%22%2C%0A%20%20%20%20%22TPW%20-%20Debris%20in%20Street%22%2C%20%20%20%20%22WPD%20-%20Lady%20Bird%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22SBO%20-%20Debris%20in%20Street%22%2C%0A%20%20%20%20%22Town%20Lake%20Debris%20Issues%22%2C%0A%20%20%20%20%22ARR%20-%20Garbage%22%2C%0A%20%20%20%20%22ARR%20-%20Spillage%20Trash%2FFluids%22%0A%20%20)%0A%20%20AND%20%60sr_closed_date%60%20IS%20NULL%0A%20%20AND%20(%60sr_created_date%60%20%3E%20%22' +
+          encodeURIComponent(isoOneMonthAgo) +
+          '%22%20%3A%3A%20floating_timestamp%20AND%20%60sr_created_date%60%20%3C%20%22' +
+          encodeURIComponent(isoNow) + '%22%20%3A%3A%20floating_timestamp)';
+        const url = `https://data.austintexas.gov/resource/xwdj-i9he.json?$query=${query}`;
+        const response = await fetch(url);
         const data: Austin311Report[] = await response.json();
         
         const new311Reports: PollutionReport[] = data

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Camera, Calendar } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
 import { useDrawer } from '@/lib/drawer-context'
@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils'
 export function FloatingButtons() {
   const { toast } = useToast()
   const pathname = usePathname()
-  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const { isDrawerOpen } = useDrawer()
