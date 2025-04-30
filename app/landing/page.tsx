@@ -21,8 +21,8 @@ export default function LandingPage() {
           <Link href="/" className="inline-block rounded-full bg-[#057c3d] px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-[#045d2a] transition">
             Explore the Map
           </Link>
-          <Link href="/reports" className="inline-block rounded-full bg-[#5ac8fa] px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-[#3bb2e0] transition">
-            My Reports
+          <Link href="/events" className="inline-block rounded-full bg-[#5ac8fa] px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-[#3bb2e0] transition">
+            Community Cleanup Events
           </Link>
         </div>
       </section>
