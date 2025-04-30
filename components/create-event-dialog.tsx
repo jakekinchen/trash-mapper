@@ -126,40 +126,42 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
       <DialogTrigger asChild>
         {trigger || <Button variant="outline" className="hidden">Trigger</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-w-[95vw] max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
+          <DialogHeader className="space-y-2">
             <DialogTitle>Create Event</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               Let&apos;s go pick up some trash! Create a new cleanup event. Fill out the details below.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
+          <div className="grid gap-3 py-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="title" className="text-sm">Title</Label>
               <Input
                 id="title"
                 name="title"
                 placeholder="Beach Cleanup"
                 required
+                className="h-9"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="description" className="text-sm">Description</Label>
               <Textarea
                 id="description"
                 name="description"
                 placeholder="Join us for our monthly beach cleanup!"
+                className="min-h-[80px]"
               />
             </div>
-            <div className="grid gap-2">
-              <Label>Date</Label>
+            <div className="grid gap-1.5">
+              <Label className="text-sm">Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal h-9",
                       !date && "text-muted-foreground"
                     )}
                   >
@@ -177,42 +179,45 @@ export function CreateEventDialog({ onEventCreated, trigger }: CreateEventDialog
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="time_start">Start Time</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="time_start" className="text-sm">Start Time</Label>
                 <Input
                   id="time_start"
                   name="time_start"
                   type="time"
                   required
+                  className="h-9"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="time_end">End Time</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="time_end" className="text-sm">End Time</Label>
                 <Input
                   id="time_end"
                   name="time_end"
                   type="time"
                   required
+                  className="h-9"
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="location">Location</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="location" className="text-sm">Location</Label>
               <Input
                 id="location"
                 name="location"
                 placeholder="Main Beach"
                 required
+                className="h-9"
               />
             </div>
             <div className="flex items-center space-x-2">
               <Switch id="is_public" name="is_public" defaultChecked />
-              <Label htmlFor="is_public">Public Event</Label>
+              <Label htmlFor="is_public" className="text-sm">Public Event</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
+          <DialogFooter className="pt-2">
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? 'Creating...' : 'Create Event'}
             </Button>
           </DialogFooter>

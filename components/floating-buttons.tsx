@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Camera, Calendar } from 'lucide-react'
+import { Camera, CalendarPlus } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
@@ -78,7 +78,7 @@ export function FloatingButtons() {
         aria-label="Schedule"
         onClick={openCreateEventDialog}
       >
-        <Calendar className="h-6 w-6 text-white" />
+        <CalendarPlus className="h-6 w-6 text-white" />
       </button>
     </div>
   )

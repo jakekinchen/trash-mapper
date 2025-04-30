@@ -686,7 +686,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette, toast]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     setValidationError(null);
