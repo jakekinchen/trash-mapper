@@ -192,6 +192,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Update user stats
+    try {
+      // First check if user has stats record
+      const { data: existingStats } = await supabase
+        .from('user_stats')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!existingStats) {
+        // Create initial stats record
+        const { error: statsCreateError } = await supabase
+          .from('user_stats')
+          .insert({
+            user_id: user.id,
+            reports_submitted: 1,  // First report
+            points: 10,           // 10 points for first report
+          });
+
+        if (statsCreateError) {
+          console.error('Failed to create user stats:', statsCreateError);
+          // Don't fail the request, just log the error
+        }
+      } else {
+        // Update existing stats
+        const { error: statsUpdateError } = await supabase
+          .from('user_stats')
+          .update({
+            reports_submitted: supabase.rpc('increment_counter', { row_id: existingStats.id, counter_name: 'reports_submitted', increment_by: 1 }),
+            points: supabase.rpc('increment_counter', { row_id: existingStats.id, counter_name: 'points', increment_by: 10 })
+          })
+          .eq('user_id', user.id);
+
+        if (statsUpdateError) {
+          console.error('Failed to update user stats:', statsUpdateError);
+          // Don't fail the request, just log the error
+        }
+      }
+    } catch (statsErr) {
+      console.error('Error handling user stats:', statsErr);
+      // Don't fail the request, just log the error
+    }
+
     // Send success response
     console.log('Report created successfully:', inserted.id);
     return NextResponse.json(
