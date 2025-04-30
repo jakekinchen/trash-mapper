@@ -9,6 +9,7 @@ import { getAllPollutionReports } from '@/lib/reports'
 import wkx from 'wkx'
 import { Filter } from 'lucide-react'
 import { ALT_HEATMAP_GRADIENT } from './heatmap-palettes'
+import { supabase } from '@/lib/supabaseClient'
 
 // Types for our data
 interface TrashBin {
@@ -57,6 +58,7 @@ interface PollutionReport {
   imageUrl?: string
   timestamp: string
   cleaned_up: boolean
+  user_id?: string
 }
 
 interface GeoJSONFeature {
@@ -130,6 +132,7 @@ export default function MapComponent() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [useAltHeatmapPalette] = useState(true)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -179,6 +182,19 @@ export default function MapComponent() {
     fetchTrashBins()
   }, [toast])
 
+  // Add effect to get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setCurrentUserId(user?.id || null)
+      } catch (error) {
+        console.error('Error getting current user:', error)
+      }
+    }
+    getCurrentUser()
+  }, [])
+
   // Fetch pollution data and 311 data
   useEffect(() => {
     const fetchAllPollutionData = async () => {
@@ -217,6 +233,7 @@ export default function MapComponent() {
             imageUrl: report.image_url,
             timestamp: report.created_at,
             cleaned_up: false,
+            user_id: report.user_id
           };
         });
 
@@ -642,7 +659,7 @@ export default function MapComponent() {
                       <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
                     </div>
                   </div>
-                  ${report.type === "user" ? `
+                  ${report.type === "user" && report.user_id === currentUserId ? `
                     <button class="delete-report-btn mt-3 w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition" data-report-id="${report.id}">Delete Report</button>
                   ` : ''}
                 </div>
@@ -688,7 +705,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette, toast]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette, toast, currentUserId]);
 
   const handleReportSubmit = async (data: ReportSubmitData) => {
     setValidationError(null);
@@ -742,6 +759,7 @@ export default function MapComponent() {
           imageUrl: result.imageUrl,
           timestamp: new Date().toISOString(), 
           cleaned_up: false,
+          user_id: currentUserId || undefined
         };
         setPollutionData((prev: PollutionReport[]) => [...prev, newReport]);
 
