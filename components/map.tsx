@@ -380,7 +380,7 @@ export default function MapComponent() {
               setUserLocation([longitude, latitude])
 
               if (map && map.setView) {
-                map.setView([latitude, longitude], 15)
+                map.setView([latitude, longitude], 11)
 
                 // Add user location marker
                 const userIcon = window.L.divIcon({
@@ -510,6 +510,58 @@ export default function MapComponent() {
       }
       pollutionMarkersRef.current = []
 
+      // Create heat map data (always show if pollution markers are enabled)
+      if (showPollutionMarkers) {
+        try {
+          // Remove existing heat layer if it exists
+          if (heatLayerRef.current) {
+            map?.removeLayer(heatLayerRef.current);
+          }
+
+          const leafletWithHeat = window.L as unknown as LeafletWithHeat;
+          if (leafletWithHeat.heatLayer) {
+            // Make sure each report has valid location data
+            const validReports = pollutionData.filter(
+              (report: PollutionReport) => 
+                report && 
+                report.location && 
+                report.location.length === 2 &&
+                !isNaN(report.location[0]) && 
+                !isNaN(report.location[1]) &&
+                report.location[0] !== 0 && 
+                report.location[1] !== 0
+            );
+
+            const heatData: LatLngTuple[] = validReports.map((report: PollutionReport) => {
+              const [longitude, latitude] = report.location;
+              return [latitude, longitude, report.severity / 5] as LatLngTuple;
+            });
+
+            if (heatData.length > 0) {
+              const heatLayerOptions: SimpleHeatOptions = {
+                radius: 25,
+                blur: 15,
+                maxZoom: 17,
+                gradient: useAltHeatmapPalette ? ALT_HEATMAP_GRADIENT : {
+                  0.4: "blue",
+                  0.6: "cyan",
+                  0.7: "lime",
+                  0.8: "yellow",
+                  1.0: "red",
+                },
+                minOpacity: 0.5,
+              };
+              const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer;
+
+              heatLayer.addTo(map);
+              heatLayerRef.current = heatLayer;
+            }
+          }
+        } catch (error) {
+          console.error("Error creating heat map:", error);
+        }
+      }
+
       // Only add markers if showPollutionMarkers is true and zoom level is appropriate
       if (showPollutionMarkers && currentZoom >= 13) {
         // Add pollution markers (showing user reports with images and 311 reports)
@@ -632,56 +684,6 @@ export default function MapComponent() {
             console.error("Error adding pollution marker:", error);
           }
         });
-
-        // Create heat map data
-        try {
-          // Remove existing heat layer if it exists
-          if (heatLayerRef.current) {
-            map?.removeLayer(heatLayerRef.current);
-          }
-
-          const leafletWithHeat = window.L as unknown as LeafletWithHeat;
-          if (leafletWithHeat.heatLayer) {
-            // Make sure each report has valid location data
-            const validReports = pollutionData.filter(
-              (report: PollutionReport) => 
-                report && 
-                report.location && 
-                report.location.length === 2 &&
-                !isNaN(report.location[0]) && 
-                !isNaN(report.location[1]) &&
-                report.location[0] !== 0 && 
-                report.location[1] !== 0
-            );
-
-            const heatData: LatLngTuple[] = validReports.map((report: PollutionReport) => {
-              const [longitude, latitude] = report.location;
-              return [latitude, longitude, report.severity / 5] as LatLngTuple;
-            });
-
-            if (heatData.length > 0) {
-              const heatLayerOptions: SimpleHeatOptions = {
-                radius: 25,
-                blur: 15,
-                maxZoom: 17,
-                gradient: useAltHeatmapPalette ? ALT_HEATMAP_GRADIENT : {
-                  0.4: "blue",
-                  0.6: "cyan",
-                  0.7: "lime",
-                  0.8: "yellow",
-                  1.0: "red",
-                },
-                minOpacity: 0.5,
-              };
-              const heatLayer = leafletWithHeat.heatLayer(heatData, heatLayerOptions) as L.Layer;
-
-              heatLayer.addTo(map);
-              heatLayerRef.current = heatLayer;
-            }
-          }
-        } catch (error) {
-          console.error("Error creating heat map:", error);
-        }
       }
     } catch (error) {
       console.error("Error adding pollution data:", error);
