@@ -20,6 +20,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet"
 import { useDrawer } from '@/lib/drawer-context'
+import { FeedbackModal } from './feedback-modal'
 
 export function Navbar() {
   const [user, setUser] = useState<User | null>(null)
@@ -120,6 +121,9 @@ export function Navbar() {
                         </SheetClose>
                       )
                     }
+                    <div className="px-4 py-3">
+                      <FeedbackModal />
+                    </div>
                   </nav>
                   <div className="my-6 border-t border-gray-200" />
                   <SheetClose asChild>
