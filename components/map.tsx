@@ -10,6 +10,7 @@ import wkx from 'wkx'
 import { Filter } from 'lucide-react'
 import { ALT_HEATMAP_GRADIENT } from './heatmap-palettes'
 import { supabase } from '@/lib/supabaseClient'
+import CleanModal from "./clean-modal"
 
 // Types for our data
 interface TrashBin {
@@ -133,6 +134,8 @@ export default function MapComponent() {
   const [useAltHeatmapPalette] = useState(true)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isCleanModalOpen, setIsCleanModalOpen] = useState(false)
+  const [reportToCleanId, setReportToCleanId] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const trashBinMarkersRef = useRef<Marker[]>([])
@@ -140,7 +143,7 @@ export default function MapComponent() {
   const heatLayerRef = useRef<Layer | null>(null)
 
   // Check if running in a mobile device
-  const isMobileDevice = () => {
+  const isMobileDevice = useCallback(() => {
     if (typeof window === "undefined") return false
 
     return (
@@ -152,7 +155,7 @@ export default function MapComponent() {
       window.navigator.userAgent.match(/BlackBerry/i) ||
       window.navigator.userAgent.match(/Windows Phone/i)
     )
-  }
+  }, [])
 
   // Fetch trash bin data
   useEffect(() => {
@@ -515,6 +518,7 @@ export default function MapComponent() {
     if (!mapLoaded || !mapInstanceRef.current || !window.L || !pollutionData || pollutionData.length === 0) {
       return;
     }
+    console.log('Current User ID when adding markers:', currentUserId);
 
     try {
       const map = mapInstanceRef.current!;
@@ -624,11 +628,14 @@ export default function MapComponent() {
                 }
               };
 
+              const canClean = report.type === "user" && !report.cleaned_up;
+              const isOwnReport = report.user_id === currentUserId;
+
               popupElement.innerHTML = `
                 <div class="p-2 max-w-xs">
-                  <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-semibold text-base">Pollution Report</h3>
-                    <div class="flex items-center gap-2">
+                  <div class="flex justify-between items-start mb-1">
+                    <h3 class="font-semibold text-base mr-3">Litter Report</h3>
+                    <div class="flex items-center gap-2 flex-shrink-0">
                       ${report.cleaned_up ? `
                         <span class="text-green-600 text-sm font-medium">Cleaned Up</span>
                       ` : ''}
@@ -638,13 +645,13 @@ export default function MapComponent() {
                   ${
                     report.imageUrl
                       ? `
-                    <div class="mb-2">
-                      <img src="${report.imageUrl}" alt="Pollution" class="w-full h-32 object-cover rounded-md" />
+                    <div class="my-2">
+                      <img src="${report.imageUrl}" alt="Litter" class="w-full h-32 object-cover rounded-md" />
                     </div>
                   `
                       : ""
                   }
-                  <div class="space-y-1.5">
+                  <div class="space-y-1.5 mt-1">
                     ${report.description ? `
                       <div class="text-sm">
                         <p>${report.description}</p>
@@ -655,12 +662,13 @@ export default function MapComponent() {
                       <span>${getTypeLabel(report.type)}</span>
                       <span class="text-muted-foreground">Reported:</span>
                       <span>${new Date(report.timestamp).toLocaleDateString()}</span>
-                      <span class="text-muted-foreground">Coords:</span>
-                      <span class="text-xs">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</span>
                     </div>
                   </div>
-                  ${report.type === "user" && report.user_id === currentUserId ? `
+                  ${isOwnReport ? `
                     <button class="delete-report-btn mt-3 w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition" data-report-id="${report.id}">Delete Report</button>
+                  ` : ''}
+                  ${canClean ? `
+                    <button class="clean-report-btn mt-2 w-full bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition" data-report-id="${report.id}">Clean</button>
                   ` : ''}
                 </div>
               `;
@@ -693,6 +701,22 @@ export default function MapComponent() {
                   });
                 }
               }, 0);
+
+              // Add event listener for the new Clean button
+              const cleanBtn = popupElement.querySelector('.clean-report-btn') as HTMLButtonElement | null;
+              if (cleanBtn) {
+                cleanBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  const reportId = cleanBtn.getAttribute('data-report-id');
+                  if (reportId) {
+                    console.log('Clean button clicked for report:', reportId); // Debug log
+                    setReportToCleanId(reportId);
+                    setIsCleanModalOpen(true);
+                    marker.closePopup(); // Close the popup after clicking
+                  }
+                });
+              }
+
               return popupElement;
             });
 
@@ -705,9 +729,9 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error adding pollution data:", error);
     }
-  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette, toast, currentUserId]);
+  }, [mapLoaded, pollutionData, showPollutionMarkers, show311Data, currentZoom, useAltHeatmapPalette, toast, currentUserId, setReportToCleanId, setIsCleanModalOpen]);
 
-  const handleReportSubmit = async (data: ReportSubmitData) => {
+  const handleReportSubmit = useCallback(async (data: ReportSubmitData) => {
     setValidationError(null);
     const reportLocation = userLocation || [-97.7431, 30.2672]; 
     const [longitude, latitude] = reportLocation;
@@ -790,21 +814,8 @@ export default function MapComponent() {
         setIsSubmittingReport(false); 
       } // If it WAS a validation error, isSubmittingReport is set within the try block's check
       
-    } finally {
-       // The finally block might be too simple now. 
-       // We only need to potentially reset state if the modal closes unexpectedly
-       // or if the success timeout hasn't run.
-       // Let's remove the complex finally logic for now as state resets are handled
-       // within the try/catch blocks or on modal close.
-       /* PREVIOUS LOGIC:
-        if (!validationError) {
-           setTimeout(() => setIsSubmittingReport(false), 1000);
-        } else {
-            setIsSubmittingReport(false);
-        }
-       */
     }
-  };
+  }, [userLocation, toast, currentUserId, setValidationError, setIsSubmittingReport, setIsSubmissionSuccess, setPollutionData, setIsReportModalOpen, validationError]);
 
   // Add event listener for custom openReportModal event
   useEffect(() => {
@@ -824,6 +835,24 @@ export default function MapComponent() {
       }
     }
   }, [])
+
+  // Callback for clearing validation error
+  const handleClearValidationError = useCallback(() => {
+    setValidationError(null);
+  }, [setValidationError]);
+
+  // Callback for closing the modal
+  const handleCloseModal = useCallback(() => {
+    setIsReportModalOpen(false);
+    // Optionally reset validation error on manual close too
+    // setValidationError(null);
+  }, [setIsReportModalOpen]);
+
+  // Callback for closing the Clean modal
+  const handleCloseCleanModal = useCallback(() => {
+    setIsCleanModalOpen(false);
+    setReportToCleanId(null); // Clear the report ID when closing
+  }, [setIsCleanModalOpen, setReportToCleanId]);
 
   // *** DEBUG LOG 3 ***
   console.log('[MapComponent] Rendering with validationError state:', validationError);
@@ -878,15 +907,20 @@ export default function MapComponent() {
       {/* Report modal */}
       <ReportModal
         isOpen={isReportModalOpen}
-        onClose={() => {
-             setIsReportModalOpen(false);
-        }}
+        onClose={handleCloseModal}
         onSubmit={handleReportSubmit}
         userLocation={userLocation}
         isSubmitting={isSubmittingReport}
         isSuccess={isSubmissionSuccess}
         validationError={validationError}
-        onClearValidationError={() => setValidationError(null)}
+        onClearValidationError={handleClearValidationError}
+      />
+
+      {/* Clean Modal */}
+      <CleanModal
+        isOpen={isCleanModalOpen}
+        onClose={handleCloseCleanModal}
+        reportId={reportToCleanId}
       />
 
       {/* Leaflet scripts */}

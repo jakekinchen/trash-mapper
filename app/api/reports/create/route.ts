@@ -1,11 +1,11 @@
-export const runtime = 'nodejs';
-
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from "openai";
 import { z } from "zod";
 import { createClient } from '@/lib/supabaseServer'
 import sharp from 'sharp';
 import { Buffer } from 'buffer';
+// import exifParser from 'exif-parser'; // <-- Comment out or remove ES import
+const exifParser = require('exif-parser'); // <-- Use require
 
 const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
 
@@ -20,6 +20,16 @@ const EnvironmentValidation = z.object({
     is_valid_environment: z.boolean(),
     reason: z.string().optional(), // Make reason optional as it might not always be provided
 })
+
+// Helper function to convert DMS (Degrees, Minutes, Seconds) from EXIF to DD (Decimal Degrees)
+function convertDMSToDD(degrees: number, minutes: number, seconds: number, direction: string): number {
+    let dd = degrees + minutes / 60 + seconds / (60 * 60);
+    if (direction === "S" || direction === "W") {
+        dd = dd * -1;
+    }
+    // Round to 6 decimal places (typical precision for GPS)
+    return parseFloat(dd.toFixed(6));
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -57,8 +67,66 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Optimize image using Sharp first
+    // Read image buffer
     const imageBuffer = Buffer.from(await image.arrayBuffer());
+
+    // --- START: EXIF GPS Extraction ---
+    let exifLat: number | null = null;
+    let exifLon: number | null = null;
+    try {
+        const parser = exifParser(imageBuffer);
+        const result = parser.parse();
+        const tags = result.tags;
+
+        if (tags && tags.GPSLatitude && tags.GPSLongitude && tags.GPSLatitudeRef && tags.GPSLongitudeRef) {
+            console.log("EXIF GPS Data Found:", { lat: tags.GPSLatitude, lon: tags.GPSLongitude, latRef: tags.GPSLatitudeRef, lonRef: tags.GPSLongitudeRef });
+            // EXIF GPS data is often an array [degrees, minutes, seconds]
+            // If it's just a number, we assume it's already decimal degrees (less common for photos)
+            if (Array.isArray(tags.GPSLatitude) && tags.GPSLatitude.length === 3 &&
+                Array.isArray(tags.GPSLongitude) && tags.GPSLongitude.length === 3) {
+                 // Assuming DMS format [degrees, minutes, seconds]
+                 // Note: exif-parser might already return decimal degrees, check result structure if needed
+                exifLat = convertDMSToDD(tags.GPSLatitude[0], tags.GPSLatitude[1], tags.GPSLatitude[2], tags.GPSLatitudeRef);
+                exifLon = convertDMSToDD(tags.GPSLongitude[0], tags.GPSLongitude[1], tags.GPSLongitude[2], tags.GPSLongitudeRef);
+                console.log(`Converted EXIF DD: Lat=${exifLat}, Lon=${exifLon}`);
+            } else if (typeof tags.GPSLatitude === 'number' && typeof tags.GPSLongitude === 'number') {
+                 // Handle case where GPS data might already be in decimal degrees
+                console.log("EXIF GPS Data appears to be Decimal Degrees.");
+                exifLat = parseFloat(tags.GPSLatitude.toFixed(6));
+                // Longitude needs to be negative for W reference if it's not already
+                exifLon = parseFloat((tags.GPSLongitudeRef === 'W' && tags.GPSLongitude > 0 ? -tags.GPSLongitude : tags.GPSLongitude).toFixed(6));
+                console.log(`Using EXIF DD: Lat=${exifLat}, Lon=${exifLon}`);
+            }
+        } else {
+           console.log("No complete EXIF GPS Data found in image.");
+        }
+    } catch (exifError) {
+        console.warn("Could not parse EXIF data:", exifError instanceof Error ? exifError.message : exifError);
+        // Continue without EXIF data if parsing fails
+    }
+    // --- END: EXIF GPS Extraction ---
+
+    // Determine final coordinates (Priority: EXIF > Client > Default)
+    let finalLat: number;
+    let finalLon: number;
+    const defaultLat = 30.2672; // Austin Default
+    const defaultLon = -97.7431;
+
+    if (exifLat !== null && exifLon !== null && Number.isFinite(exifLat) && Number.isFinite(exifLon)) {
+        finalLat = exifLat;
+        finalLon = exifLon;
+        console.log("Using EXIF coordinates for report.");
+    } else if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        finalLat = lat;
+        finalLon = lon;
+        console.log("Using Client-provided coordinates for report.");
+    } else {
+        finalLat = defaultLat;
+        finalLon = defaultLon;
+        console.log("Using Default coordinates for report.");
+    }
+
+    // Optimize image using Sharp first
     const optimizedImageBuffer = await sharp(imageBuffer)
       .resize(768, 768, {
         fit: 'inside',
@@ -79,7 +147,7 @@ export async function POST(request: NextRequest) {
         messages: [
           { 
             role: 'system', 
-            content: `Analyze the attached image. Determine if the image depicts litter/pollution in a physical, outdoor, public (or semi-public like a park) environment suitable for a litter reporting app. Do not approve images that are primarily indoors, screenshots, maps, selfies, faces, or lack clear litter. Respond ONLY with a JSON object containing two fields: "is_valid_environment" (boolean) and "reason" (string, explaining why it's invalid, or "Valid environment" if valid). Example invalid reasons: "Image appears to be indoors.", "No clear litter visible.", "Image is a screenshot."` 
+            content: `Analyze the attached image. Determine if the image depicts litter/pollution in a physical, outdoor, public (or semi-public like a park) environment suitable for a litter reporting app. Do not approve images that are primarily indoors, screenshots, maps, selfies, faces, or lack clear litter. Respond ONLY with a JSON object containing two fields: "is_valid_environment" (boolean) and "reason" (string, explaining why it's invalid, or "Valid environment" if valid). Example invalid reasons: "Image appears to be indoors.", "No clear litter visible.", "Image is a screenshot.", "Image is not a photo of the environment."` 
           },
           {
             role: 'user',
@@ -169,7 +237,7 @@ export async function POST(request: NextRequest) {
       .from('reports') // Ensure this table name is correct
       .insert({
         user_id: user.id,
-        geom: `POINT(${lon} ${lat})`,
+        geom: `POINT(${finalLon} ${finalLat})`,
         image_url: publicUrl,
         severity: userSeverity, // Use user severity for now, or use AI severity if parsed
         is_valid_environment: true, // Set to true since validation passed

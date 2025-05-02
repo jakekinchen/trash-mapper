@@ -42,12 +42,17 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
   const [isCapturing, setIsCapturing] = useState(false)
   const webcamRef = useRef<Webcam>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const previousImageFileRef = useRef<File | null>(null); // <-- Add ref to track previous imageFile
 
   useEffect(() => {
-    if (imageFile && onClearValidationError) {
+    // Clear validation error only when imageFile actually changes (to a non-null value)
+    if (imageFile && imageFile !== previousImageFileRef.current && onClearValidationError) {
+      console.log('[ReportModal] useEffect detected imageFile change, clearing validation.'); // Optional: Add log for debugging
       onClearValidationError();
     }
-  }, [imageFile, onClearValidationError]);
+    // Update the ref *after* the check for the next render
+    previousImageFileRef.current = imageFile;
+  }, [imageFile, onClearValidationError]); // Dependencies remain the same
 
   const startCamera = async () => {
     if (onClearValidationError) onClearValidationError();
