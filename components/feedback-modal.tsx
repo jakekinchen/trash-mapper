@@ -10,10 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { MessageSquare } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
+import { supabase } from '@/lib/supabaseClient'
 
 export function FeedbackModal() {
   const [isOpen, setIsOpen] = useState(false)
@@ -26,16 +26,25 @@ export function FeedbackModal() {
     setIsSubmitting(true)
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError)
+        throw new Error('Not authenticated')
+      }
+
       const response = await fetch('/api/send-feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ message }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send feedback')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send feedback')
       }
 
       toast({
@@ -45,9 +54,10 @@ export function FeedbackModal() {
       setIsOpen(false)
       setMessage('')
     } catch (error) {
+      console.error('Feedback error:', error)
       toast({
         title: "Error",
-        description: "Failed to send feedback. Please try again later.",
+        description: error instanceof Error ? error.message : "Failed to send feedback. Please try again later.",
         variant: "destructive",
       })
     } finally {

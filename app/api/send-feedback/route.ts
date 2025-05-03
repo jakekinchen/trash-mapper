@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 
@@ -7,28 +6,49 @@ const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || 'feedback@trashmapperatx.co
 
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { session } } = await supabase.auth.getSession()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    if (!session) {
+    // Get the session from the request headers
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.split(' ')[1]
+    
+    // Verify the session
+    const { data: { user }, error: sessionError } = await supabase.auth.getUser(token)
+    
+    if (sessionError || !user) {
+      console.error('Session error:', sessionError)
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
         { status: 401 }
       )
     }
 
     const { message } = await request.json()
-    const userEmail = session.user.email
+    const userEmail = user.email
 
     // Create a transporter using environment variables
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: true,
+      secure: false, // Set to false to allow non-TLS connections
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+      }
     })
 
     // Send the email
