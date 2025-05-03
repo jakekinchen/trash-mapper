@@ -4,8 +4,7 @@ import { z } from "zod";
 import { createClient } from '@/lib/supabaseServer'
 import sharp from 'sharp';
 import { Buffer } from 'buffer';
-// import exifParser from 'exif-parser'; // <-- Comment out or remove ES import
-const exifParser = require('exif-parser'); // <-- Use require
+import exifParser from 'exif-parser';
 
 const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
 

@@ -286,7 +286,7 @@ export default function MapComponent() {
     };
 
     fetchAllPollutionData();
-  }, [toast]);
+  }, [toast])
 
   // Ensure mapLoaded is true if window.L is already available (for client navigation)
   useEffect(() => {
@@ -360,7 +360,7 @@ export default function MapComponent() {
         }
       }
     }
-  }, [mapLoaded, toast])
+  }, [mapLoaded, toast, isMobileDevice])
 
   // Helper function to handle location fallback
   const handleLocationFallback = useCallback((map: LeafletMap | null, defaultLocation: { latitude: number; longitude: number }) => {
@@ -438,7 +438,7 @@ export default function MapComponent() {
     } catch (error) {
       console.error("Error in geolocation effect:", error)
     }
-  }, [mapLoaded, toast, handleLocationFallback])
+  }, [mapLoaded, toast, handleLocationFallback, isMobileDevice])
 
   // Add trash bin markers
   useEffect(() => {
