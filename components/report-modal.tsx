@@ -32,8 +32,7 @@ interface ReportModalProps {
 }
 
 export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, isSubmitting, isSuccess, validationError, onClearValidationError }: ReportModalProps) {
-  // *** DEBUG LOG 4 ***
-  console.log('[ReportModal] Rendering with validationError prop:', validationError);
+  // Debug log removed
 
   const [image, setImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -47,7 +46,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
   useEffect(() => {
     // Clear validation error only when imageFile actually changes (to a non-null value)
     if (imageFile && imageFile !== previousImageFileRef.current && onClearValidationError) {
-      console.log('[ReportModal] useEffect detected imageFile change, clearing validation.'); // Optional: Add log for debugging
+      // removed verbose log
       onClearValidationError();
     }
     // Update the ref *after* the check for the next render
@@ -196,13 +195,9 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
                   sizes="(max-width: 640px) 100vw, 500px"
                 />
                 {validationError && (
-                    <>
-                        {/* --- TEMPORARY DEBUG LOG --- */}
-                        {console.log('[ReportModal] >>> Rendering Image Overlay because validationError is:', validationError)}
-                        <div className="absolute inset-0 bg-red-500/40 flex items-center justify-center rounded-md z-20">
-                            <AlertCircle className="h-10 w-10 text-white" />
-                        </div>
-                    </>
+                   <div className="absolute inset-0 bg-red-500/40 flex items-center justify-center rounded-md z-20">
+                     <AlertCircle className="h-10 w-10 text-white" />
+                   </div>
                 )}
                 <Button
                   onClick={() => {

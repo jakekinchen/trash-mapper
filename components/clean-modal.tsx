@@ -14,9 +14,10 @@ interface CleanModalProps {
   isOpen: boolean
   onClose: () => void
   reportId: string | null // ID of the report being cleaned
+  onConfirm: (reportId: string) => void;
 }
 
-export default function CleanModal({ isOpen, onClose, reportId }: CleanModalProps) {
+export default function CleanModal({ isOpen, onClose, reportId, onConfirm }: CleanModalProps) {
   const { toast } = useToast()
   const [image, setImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -112,9 +113,12 @@ export default function CleanModal({ isOpen, onClose, reportId }: CleanModalProp
       // Success
       setIsSuccess(true);
       toast({
-        title: "Report Marked as Cleaned!",
-        description: "Thank you for cleaning up! Points may be awarded after review.",
+        title: "Clean Proof Submitted!",
+        description: "Thank you! The report status will update shortly.",
       });
+
+      // Call the onConfirm callback with the ID
+      onConfirm(reportId);
 
       // Delay closing the modal to show success state
       setTimeout(() => {

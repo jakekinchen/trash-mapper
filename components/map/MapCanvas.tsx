@@ -36,28 +36,44 @@ interface MapCanvasProps {
 export default function MapCanvas({
   bins,
   reports,
-  show311,
-  userId,
-  onDelete,
-  onClean,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  show311: _show311,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  userId: _userId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onDelete: _onDelete,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onClean: _onClean,
   userLocation, // Receive userLocation from props
   loading,
 }: MapCanvasProps) {
-  const { current: map } = useMap();
+  // Get the MapRef using the hook
+  const mapRef = useMap();
+
+  // Log received props
+  console.log('[MapCanvas] Received props:', { userLocation, loading });
 
   const initialViewState = userLocation
     ? { longitude: userLocation[0], latitude: userLocation[1], zoom: 14 }
     : INITIAL_VIEW_STATE;
 
-  // When userLocation updates, recenter the map without causing React state loops
+  // When userLocation updates, recenter the map 
   useEffect(() => {
-    if (map && userLocation) {
-      const center = map.getCenter();
-      if (Math.abs(center.lng - userLocation[0]) > 0.0001 || Math.abs(center.lat - userLocation[1]) > 0.0001) {
-        map.flyTo({ center: userLocation, zoom: 14 });
+    // Access the default map instance via mapRef.default?.getMap()
+    const mapInstance = mapRef?.default?.getMap(); 
+    console.log('[MapCanvas Centering Effect] Running. Map Instance:', mapInstance ? 'Exists' : 'null', 'UserLocation:', userLocation);
+
+    if (mapInstance && userLocation) {
+      const center = mapInstance.getCenter();
+      const condition = Math.abs(center.lng - userLocation[0]) > 0.0001 || Math.abs(center.lat - userLocation[1]) > 0.0001;
+      console.log('[MapCanvas Centering Effect] Center:', center, 'Condition:', condition);
+      if (condition) {
+        console.log('[MapCanvas Centering Effect] Calling flyTo...');
+        mapInstance.flyTo({ center: userLocation, zoom: 14 });
       }
     }
-  }, [map, userLocation]);
+    // Depend on the mapRef object provided by the hook and userLocation
+  }, [mapRef, userLocation]);
 
   if (loading && !userLocation) {
     return (
@@ -88,6 +104,7 @@ export default function MapCanvas({
         }
       `}</style>
       <Map
+        // No ref prop needed when using useMap()
         mapLib={maplibregl}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
@@ -125,6 +142,7 @@ export default function MapCanvas({
         ))}
 
         {/* Render user location if available with pulsing blue circle */}
+        {console.log('[MapCanvas Render] Checking userLocation for marker:', userLocation)}
         {userLocation && (
           <Marker
             key="user-location"

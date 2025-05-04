@@ -36,6 +36,9 @@ export default function Map() {
     openClean: (id: string) => { setCleanId(id); setCleanOpen(true); }
   });
 
+  // Log location updates received from the hook
+  console.log('[Map Index] Received from useUserLocation:', { location, loading });
+
   // Effect to close ReportModal when submission is successful
   // The hook resets its internal `success` state after 1.5s
   // We use a separate effect to avoid putting `setReportOpen` in hook dependencies

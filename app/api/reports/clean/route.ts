@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
            console.log(`User ${cleaningUserId} cleaned report by ${reporterUserId}. Awarding cleaning points.`);
            // Similar logic to update/create stats for cleaningUserId, perhaps with different point values
            // For simplicity, we'll skip this for now but you can add it here.
-       }
+        }
 
     } catch (statsErr) {
       console.error('Error handling user stats during clean update:', statsErr);
