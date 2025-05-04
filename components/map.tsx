@@ -117,6 +117,103 @@ interface LeafletWithHeat extends L.Map {
   heatLayer: (data: LatLngTuple[], options: SimpleHeatOptions) => L.Layer;
 }
 
+// Helper function for requesting user location with browser-specific handling
+function requestUserLocation(
+  onFix: (coords: GeolocationCoordinates) => void,
+  onFail: () => void
+) {
+  if (!navigator.geolocation) return onFail();
+
+  const isEdge = navigator.userAgent.includes("Edg/");
+  console.log(`Browser detection - Edge: ${isEdge}`);
+  
+  // Edge-specific settings
+  const options = {
+    enableHighAccuracy: !isEdge, // Disable high accuracy for Edge to improve reliability
+    timeout: isEdge ? 60000 : 10000, // Longer timeout for Edge
+    maximumAge: isEdge ? 300000 : 0 // Allow cached positions for Edge
+  };
+  
+  console.log("Attempting geolocation with options:", options);
+  
+  // For Edge, try directly with less strict settings
+  if (isEdge) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        console.log("Edge position obtained:", pos.coords);
+        onFix(pos.coords);
+      },
+      (err) => {
+        console.log(`Edge geolocation error: Code ${err.code} - ${err.message}`);
+        // For Edge, if error is timeout or position unavailable, retry with even more relaxed settings
+        if (err.code === 2 || err.code === 3) {
+          console.log("Retrying with more relaxed settings for Edge...");
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              console.log("Edge retry position obtained:", pos.coords);
+              onFix(pos.coords);
+            },
+            (err) => {
+              console.log(`Edge retry failed: Code ${err.code} - ${err.message}`);
+              onFail();
+            },
+            {
+              enableHighAccuracy: false,
+              timeout: 120000,
+              maximumAge: 600000
+            }
+          );
+        } else {
+          onFail();
+        }
+      },
+      options
+    );
+    return;
+  }
+
+  // Non-Edge browsers use the original implementation with high accuracy first
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      console.log("High accuracy position obtained:", pos.coords);
+      onFix(pos.coords);
+    },
+    (err) => {
+      console.log(`Geolocation error (high accuracy): Code ${err.code} - ${err.message}`);
+      
+      // If permission denied (1), fail immediately
+      if (err.code === 1) {
+        console.log("Permission denied, failing immediately");
+        onFail();
+        return;
+      }
+      
+      // Second attempt with low accuracy for non-Edge browsers
+      console.log("Attempting geolocation with low accuracy...");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log("Low accuracy position obtained:", pos.coords);
+          onFix(pos.coords);
+        },
+        (err) => {
+          console.log(`Geolocation error (low accuracy): Code ${err.code} - ${err.message}`);
+          onFail();
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 8000,
+          maximumAge: 300000
+        }
+      );
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+}
+
 export default function MapComponent() {
   const { toast } = useToast()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
@@ -362,83 +459,62 @@ export default function MapComponent() {
     }
   }, [mapLoaded, toast, isMobileDevice])
 
-  // Helper function to handle location fallback
-  const handleLocationFallback = useCallback((map: LeafletMap | null, defaultLocation: { latitude: number; longitude: number }) => {
-    try {
-      setUserLocation([defaultLocation.longitude, defaultLocation.latitude])
-
-      if (map && map.setView) {
-        map.setView([defaultLocation.latitude, defaultLocation.longitude], 12)
-      }
-
-      toast({
-        title: "Using Default Location",
-        description: "Using Austin, Texas as the default location.",
-        variant: "warning",
-      })
-    } catch (error) {
-      console.error("Error in location fallback:", error)
-    }
-  }, [toast])
-
   // Get user's location with better error handling
   useEffect(() => {
     if (!mapLoaded || !mapInstanceRef.current || !window.L) return
 
-    try {
-      const map = mapInstanceRef.current
+    const map = mapInstanceRef.current
+    const defaultLoc = { lat: 30.2672, lng: -97.7431 }
 
-      // Default location (Austin, Texas) as fallback
-      const defaultLocation = { latitude: 30.2672, longitude: -97.7431 }
-
-      // Try to get user location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            try {
-              const { longitude, latitude } = position.coords
-              setUserLocation([longitude, latitude])
-
-              if (map && map.setView) {
-                map.setView([latitude, longitude], 11)
-
-                // Add user location marker
-                const userIcon = window.L.divIcon({
-                  html: `<div class="relative flex h-8 w-8 items-center justify-center">
-                          <div class="absolute h-4 w-4 rounded-full bg-blue-500 animate-ping"></div>
-                          <div class="absolute h-4 w-4 rounded-full bg-blue-500"></div>
-                        </div>`,
-                  className: "user-location-marker",
-                })
-
-                window.L.marker([latitude, longitude], { icon: userIcon }).addTo(map)
-              }
-
-              toast({
-                title: "Location Found",
-                description: "Using your current location",
-              })
-            } catch (error) {
-              console.error("Error setting user location:", error)
-              // Fall back to default location
-              handleLocationFallback(map, defaultLocation)
-            }
-          },
-          (error) => {
-            console.error("Error getting location:", error)
-            // Use default location instead
-            handleLocationFallback(map, defaultLocation)
-          },
-          { timeout: 10000, enableHighAccuracy: true },
-        )
-      } else {
-        // Browser doesn't support geolocation
-        handleLocationFallback(map, defaultLocation)
-      }
-    } catch (error) {
-      console.error("Error in geolocation effect:", error)
+    const onSuccess = ({ latitude, longitude }: GeolocationCoordinates) => {
+      console.log("Setting user location:", { latitude, longitude });
+      setUserLocation([longitude, latitude])
+      map.setView([latitude, longitude], 11)
+      const userIcon = window.L.divIcon({
+        html: `<div class="relative flex h-8 w-8 items-center justify-center">
+                 <div class="absolute h-4 w-4 rounded-full bg-blue-500 animate-ping"></div>
+                 <div class="absolute h-4 w-4 rounded-full bg-blue-500"></div>
+               </div>`,
+        className: "user-location-marker",
+      })
+      window.L.marker([latitude, longitude], { icon: userIcon }).addTo(map)
+      toast({ 
+        title: "Location found", 
+        description: "Using your current position",
+        duration: 3000
+      })
     }
-  }, [mapLoaded, toast, handleLocationFallback, isMobileDevice])
+
+    const onFailure = () => {
+      console.log("Using default location");
+      setUserLocation([defaultLoc.lng, defaultLoc.lat])
+      map.setView([defaultLoc.lat, defaultLoc.lng], 12)
+      toast({
+        title: "Using default location",
+        description: "Austin, Texas (location services unavailable)",
+        variant: "warning",
+        duration: 5000
+      })
+    }
+
+    // quick permission check – skip prompt if already denied
+    console.log("Checking geolocation permissions...");
+    navigator.permissions
+      .query({ name: "geolocation" as PermissionName })
+      .then(p => {
+        console.log("Permission state:", p.state);
+        if (p.state === "denied") {
+          console.log("Geolocation permission already denied");
+          onFailure();
+        } else {
+          requestUserLocation(onSuccess, onFailure);
+        }
+      })
+      .catch(err => {
+        console.error("Error checking permissions:", err);
+        onFailure();
+      })
+  }, [mapLoaded, toast])
 
   // Add trash bin markers
   useEffect(() => {

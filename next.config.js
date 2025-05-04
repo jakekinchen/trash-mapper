@@ -17,7 +17,11 @@ const nextConfig = {
     'http://172.20.10.4:3000',
     'https://172.20.10.4:3000',
     'local-origin.dev', 
-    '*.local-origin.dev'
+    '*.local-origin.dev',
+    'http://192.168.1.109',
+    'https://192.168.1.109',
+    'http://192.168.1.109:3000',
+    'https://192.168.1.109:3000'
   ],
 }
 
