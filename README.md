@@ -1,4 +1,4 @@
-# Trash Mapper - Report and Map Litter
+# Trash Mapper - Report, Map, and Locate Litter
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://trash-mapper.vercel.app)
 
