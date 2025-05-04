@@ -120,9 +120,7 @@ export function Navbar() {
                         </SheetClose>
                       )
                     }
-                    <div className="px-4 py-3">
-                      <FeedbackModal />
-                    </div>
+                    <FeedbackModal />
                   </nav>
                   <div className="my-6 border-t border-gray-200" />
                   <SheetClose asChild>

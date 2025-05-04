@@ -68,8 +68,10 @@ export function FeedbackModal() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" />
+        <Button 
+          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base w-full justify-start text-gray-900 h-auto"
+        >
+          <MessageSquare className="w-5 h-5 text-purple-600" />
           Feedback
         </Button>
       </DialogTrigger>
