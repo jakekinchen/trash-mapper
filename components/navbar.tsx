@@ -66,8 +66,8 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-3">
-          <div className="bg-white/20 p-2.5 rounded-full flex items-center justify-center">
-            <TrashIcon className="h-6 w-6 text-white trash-icon" />
+          <div className="bg-white/20 p-2 rounded-full flex items-center justify-center">
+            <Image src="/temp-icon.png" alt="TrashMapperATX Logo" width={24} height={24} className="h-10 w-10 translate-y-0.5" />
           </div>
           <span className="text-xl font-bold tracking-wide">Trash Mapper ATX</span>
         </Link>

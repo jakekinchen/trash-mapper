@@ -858,7 +858,7 @@ export default function MapComponent() {
   console.log('[MapComponent] Rendering with validationError state:', validationError);
 
   return (
-    <div className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
+    <div className="relative w-full h-[calc(100vh-6.125rem)]" id="map-component">
       <div ref={mapRef} className="w-full h-full z-0" />
       
       {/* Layer visibility toggles as dropdown */}
