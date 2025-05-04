@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
-import { TrashIcon } from './trash-icon'
 import { Button } from "@/components/ui/button"
 import { Menu, LogOut, Map } from 'lucide-react'
 import {
