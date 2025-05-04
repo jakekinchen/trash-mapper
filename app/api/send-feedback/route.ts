@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       }
     })
 
-    // Send the email
+    // Send the email to feedback email
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: FEEDBACK_EMAIL,
@@ -63,6 +63,24 @@ export async function POST(request: Request) {
         <p><strong>From:</strong> ${userEmail}</p>
         <p><strong>Message:</strong></p>
         <p>${message.replace(/\n/g, '<br>')}</p>
+      `,
+    })
+
+    // Send confirmation email to user
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to: userEmail,
+      subject: 'Thank you for your feedback - Trash Mapper ATX',
+      text: `Thank you for your feedback! Here's a copy of what you sent:\n\n${message}\n\nWe appreciate your help in making Trash Mapper ATX better!`,
+      html: `
+        <h2>Thank you for your feedback!</h2>
+        <p>We've received your message and appreciate your help in making Trash Mapper ATX better.</p>
+        <p><strong>Here's a copy of what you sent:</strong></p>
+        <div style="color: #666; margin-left: 20px; border-left: 3px solid #ddd; padding-left: 15px;">
+          <p>${message.replace(/\n/g, '<br>')}</p>
+        </div>
+        <p>We'll review your feedback and get back to you if needed.</p>
+        <p>Best regards,<br>The Trash Mapper ATX Team</p>
       `,
     })
 
