@@ -115,6 +115,7 @@ export default function MapCanvas({
         provider={tileProvider}
         center={center}
         zoom={zoom}
+        zoomSnap={false} 
         onBoundsChanged={handleBoundsChange}
         dprs={[1, 2]}
         onClick={handleClosePopup}
