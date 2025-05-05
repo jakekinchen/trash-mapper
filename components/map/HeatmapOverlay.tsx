@@ -32,7 +32,6 @@ function latLonToPixel(lat: number, lon: number, bounds: Bounds, canvasWidth: nu
 
 const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number | null>(null);
 
   console.log('[HeatmapOverlay] Rendering with props:', { numReports: reports.length, zoom, bounds });
 
@@ -122,7 +121,7 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
     } catch (e) {
         console.error('[HeatmapOverlay] Error during color mapping (getImageData/putImageData): ', e);
     }
-  }, [reports, radius, bounds, zoom]);
+  }, [reports, radius, bounds]);
 
   useEffect(() => {
     if (!bounds) {

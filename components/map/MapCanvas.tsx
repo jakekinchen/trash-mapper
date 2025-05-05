@@ -2,7 +2,7 @@
 // This component will contain the actual map rendering logic 
 // using either MapLibre GL JS or Deck.gl integrated with React.
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Map, Marker, Point } from 'pigeon-maps';
 import { maptiler, osm } from 'pigeon-maps/providers';
 import type { Bounds } from 'pigeon-maps';
