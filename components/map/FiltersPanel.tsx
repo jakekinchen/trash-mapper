@@ -8,6 +8,8 @@ interface FiltersPanelProps {
   togglePollution: (value: boolean) => void;
   show311: boolean;
   toggle311: (value: boolean) => void;
+  showHeatmap: boolean;
+  toggleHeatmap: (value: boolean) => void;
   // Add zoom levels if needed for disabling checkboxes
   currentZoom?: number; // Assuming zoom is managed elsewhere now
 }
@@ -19,11 +21,12 @@ export default function FiltersPanel({
   togglePollution,
   show311,
   toggle311,
+  showHeatmap,
+  toggleHeatmap,
   currentZoom = 13, // Default zoom if not provided
 }: FiltersPanelProps) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
-  const trashZoomThreshold = 14;
   const pollutionZoomThreshold = 13;
 
   return (
@@ -76,11 +79,22 @@ export default function FiltersPanel({
               onChange={(e) => toggleTrashBins(e.target.checked)}
               className="form-checkbox h-4 w-4 text-green-600 accent-green-600"
               aria-label="Toggle trash bins layer"
-              disabled={currentZoom < trashZoomThreshold} // Disable based on zoom
             />
-            <span className={`text-sm font-medium ${currentZoom < trashZoomThreshold ? 'text-gray-400' : ''}`}>
+            <span className="text-sm font-medium">
               Trash Bins
-              {currentZoom < trashZoomThreshold && " (zoom in to view)"}
+            </span>
+          </label>
+          <div className="border-t border-gray-200 my-2"></div>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showHeatmap}
+              onChange={(e) => toggleHeatmap(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-orange-600 accent-orange-600"
+              aria-label="Toggle heatmap view"
+            />
+            <span className="text-sm font-medium">
+              Heatmap View
             </span>
           </label>
         </div>
