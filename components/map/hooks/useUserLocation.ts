@@ -1,19 +1,21 @@
 import { useEffect, useState, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import { Point } from 'pigeon-maps'; // Import Point type
 
-// Austin, TX coordinates
-const DEFAULT_LOCATION: [number, number] = [-97.7431, 30.2672];
+// Austin, TX coordinates [lat, lng] for Pigeon Maps
+const DEFAULT_LOCATION: Point = [30.2672, -97.7431];
 
 // Geolocation options based on suggestions
 const GEO_OPTIONS = {
-  enableHighAccuracy: false,   // Fall back to coarse IP/Wi-Fi first
+  enableHighAccuracy: true,   // Force high accuracy
   timeout: 60000,           // Increased timeout to 60 seconds
   maximumAge: 300000        // Accept positions up to 5 minutes old
 };
 
 export default function useUserLocation() {
   const { toast } = useToast();
-  const [location, setLocation] = useState<[number, number]>(DEFAULT_LOCATION);
+  // Use Point type for state
+  const [location, setLocation] = useState<Point | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasShownError, setHasShownError] = useState(false);
@@ -21,10 +23,10 @@ export default function useUserLocation() {
   const handleSuccess = useCallback((position: GeolocationPosition) => {
     const { longitude, latitude, accuracy } = position.coords;
     console.log('Geolocation Success:', { longitude, latitude, accuracy }); // Log success
-    setLocation([longitude, latitude]);
+    // Set location state with [lat, lng]
+    setLocation([latitude, longitude]); 
     setLoading(false);
     setError(null);
-    // Reset error shown flag on success, so errors show again if they recur
     setHasShownError(false);
   }, []);
 
@@ -70,13 +72,14 @@ export default function useUserLocation() {
       setHasShownError(true);
     }
 
-    // Fall back to default location only if permission denied (code 1)
-    if (geoError.code === 1) {
-      setLocation(DEFAULT_LOCATION);
+    // Fall back to default location if not already set and error occurs
+    // Don't set default if already have a location from previous success
+    if (!location) { 
+        setLocation(DEFAULT_LOCATION);
     }
     setLoading(false);
     setError(geoError.message || "Could not get location.");
-  }, [toast, hasShownError]);
+  }, [toast, hasShownError, location]); // Add location to dependency array
 
   useEffect(() => {
     // Check for geolocation support first
@@ -100,10 +103,8 @@ export default function useUserLocation() {
         return;
     }
 
-    // First attempt a single-shot position to get quick result on browsers that deny watchPosition initially
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, GEO_OPTIONS);
-
-    // Then start watchPosition for continuous updates
+    // Start watchPosition for updates (will also provide initial position)
+    // Removed initial getCurrentPosition as watchPosition handles it
     setLoading(true); // Set loading true when starting watch
     const watchId = navigator.geolocation.watchPosition(
       handleSuccess,

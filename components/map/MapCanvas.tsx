@@ -2,80 +2,107 @@
 // This component will contain the actual map rendering logic 
 // using either MapLibre GL JS or Deck.gl integrated with React.
 
-import React, { useEffect } from 'react';
-import { Map, NavigationControl, Marker, useMap } from '@vis.gl/react-maplibre';
-import maplibregl, { LngLatBoundsLike } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import React, { useState, useEffect } from 'react';
+import { Map, Marker, Point, ZoomControl, Overlay } from 'pigeon-maps';
+import { maptiler, osm } from 'pigeon-maps/providers';
 import type { PollutionReport, TrashBin } from './types';
 
-const INITIAL_VIEW_STATE = {
-  longitude: -97.7431, // Default to Austin
-  latitude: 30.2672,
-  zoom: 12
-};
+// Remove MapLibre CSS import and maplibre-gl imports
+// import maplibregl, { LngLatBoundsLike } from 'maplibre-gl';
+// import 'maplibre-gl/dist/maplibre-gl.css';
 
-const MAP_TILER_KEY = process.env.NEXT_PUBLIC_MAP_TILER_KEY;
+const INITIAL_CENTER: Point = [30.2672, -97.7431]; // Default to Austin [lat, lng]
+const INITIAL_ZOOM = 12;
 
-// Define bounds for the Austin area
-const AUSTIN_BOUNDS: LngLatBoundsLike = [
-  [-98.2, 29.9], // Southwest coordinates
-  [-97.2, 30.7]  // Northeast coordinates
-];
+const MAP_TILER_KEY = process.env.NEXT_PUBLIC_MAP_TILER_KEY as string | undefined;
+const tileProvider = MAP_TILER_KEY ? maptiler(MAP_TILER_KEY, 'streets') : osm;
+
+// Define bounds (optional, Pigeon Maps doesn't enforce maxBounds directly like MapLibre)
+// const AUSTIN_BOUNDS: LngLatBoundsLike = [
+//   [-98.2, 29.9], // Southwest coordinates
+//   [-97.2, 30.7]  // Northeast coordinates
+// ];
 
 interface MapCanvasProps {
   bins: TrashBin[];
   reports: PollutionReport[];
-  show311: boolean;
-  userId: string | null;
-  onDelete: (id: string) => void;
-  onClean: (id: string) => void;
-  userLocation: [number, number] | null; // Add userLocation prop
+  userLocation: Point | null; // Use Pigeon Maps Point type [lat, lng]
   loading: boolean; // whether geolocation is still loading
+  // Removed unused props that were MapLibre specific or placeholders
+  // show311: boolean;
+  // userId: string | null;
+  // onDelete: (id: string) => void;
+  // onClean: (id: string) => void;
 }
+
+// --- Custom Marker Components ---
+
+// const UserLocationMarker = ({ anchor }: { anchor: Point }) => {
+//   console.log('[UserLocationMarker] Anchor:', anchor);
+//   return (
+//     <div> 
+//       <div className="pulse-marker"></div>
+//     </div>
+//   );
+// };
+
+// const TrashBinMarker = ({ anchor, onClick }: { anchor: Point, onClick: () => void }) => {
+//   console.log('[TrashBinMarker] Anchor:', anchor);
+//   return (
+//     <div 
+//       style={{ 
+//         width: '12px', 
+//         height: '12px',
+//         backgroundColor: '#2563eb', // blue-600
+//         borderRadius: '50%',
+//         cursor: 'pointer'
+//       }}
+//       onClick={onClick}
+//     />
+//   );
+// }
+
+// const PollutionReportMarker = ({ anchor, onClick }: { anchor: Point, onClick: () => void }) => {
+//   console.log('[PollutionReportMarker] Anchor:', anchor);
+//   return (
+//     <div 
+//       style={{ 
+//         width: '12px',
+//         height: '12px',
+//         backgroundColor: '#dc2626', // red-600
+//         borderRadius: '50%',
+//         cursor: 'pointer'
+//       }}
+//       onClick={onClick}
+//     />
+//   );
+// }
+
+// --- Main Map Canvas Component ---
 
 export default function MapCanvas({
   bins,
   reports,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  show311: _show311,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  userId: _userId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onDelete: _onDelete,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onClean: _onClean,
   userLocation, // Receive userLocation from props
   loading,
 }: MapCanvasProps) {
-  // Get the MapRef using the hook
-  const mapRef = useMap();
 
-  // Log received props
-  console.log('[MapCanvas] Received props:', { userLocation, loading });
+  const [center, setCenter] = useState<Point>(userLocation || INITIAL_CENTER);
+  const [zoom, setZoom] = useState(INITIAL_ZOOM);
+  const [activeOverlay, setActiveOverlay] = useState<{ anchor: Point, report: PollutionReport } | null>(null);
+  const [initialLocationSet, setInitialLocationSet] = useState(false); // Flag for initial centering
 
-  const initialViewState = userLocation
-    ? { longitude: userLocation[0], latitude: userLocation[1], zoom: 14 }
-    : INITIAL_VIEW_STATE;
-
-  // When userLocation updates, recenter the map 
+  // Effect to center map ONCE when userLocation is first available
   useEffect(() => {
-    // Access the default map instance via mapRef.default?.getMap()
-    const mapInstance = mapRef?.default?.getMap(); 
-    console.log('[MapCanvas Centering Effect] Running. Map Instance:', mapInstance ? 'Exists' : 'null', 'UserLocation:', userLocation);
-
-    if (mapInstance && userLocation) {
-      const center = mapInstance.getCenter();
-      const condition = Math.abs(center.lng - userLocation[0]) > 0.0001 || Math.abs(center.lat - userLocation[1]) > 0.0001;
-      console.log('[MapCanvas Centering Effect] Center:', center, 'Condition:', condition);
-      if (condition) {
-        console.log('[MapCanvas Centering Effect] Calling flyTo...');
-        mapInstance.flyTo({ center: userLocation, zoom: 14 });
-      }
+    if (userLocation && !initialLocationSet) {
+      console.log('[MapCanvas] Setting initial center/zoom based on userLocation');
+      setCenter(userLocation);
+      setZoom(14); 
+      setInitialLocationSet(true); // Mark as set
     }
-    // Depend on the mapRef object provided by the hook and userLocation
-  }, [mapRef, userLocation]);
+  }, [userLocation, initialLocationSet]); // Depend only on these
 
-  if (loading && !userLocation) {
+  if (loading && !userLocation && !initialLocationSet) { // Adjust loading condition slightly
     return (
       <div className="w-full h-full flex items-center justify-center">
         Locating…
@@ -86,7 +113,7 @@ export default function MapCanvas({
   // Render map once location ready or loading finished
   return (
     <div className="w-full h-full relative">
-      {/* Add CSS for pulsing animation - typically in a global CSS file or styled components */}
+      {/* Pulse animation style (keep for UserLocationMarker) */}
       <style>{`
         @keyframes pulse {
           0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
@@ -104,27 +131,20 @@ export default function MapCanvas({
         }
       `}</style>
       <Map
-        // No ref prop needed when using useMap()
-        mapLib={maplibregl}
-        initialViewState={initialViewState}
-        style={{ width: '100%', height: '100%' }}
-        mapStyle={`https://api.maptiler.com/maps/streets/style.json?key=${MAP_TILER_KEY}`} // Use style URL again
-        maxBounds={AUSTIN_BOUNDS}
-        renderWorldCopies={false}
-        validateStyle={false} // Add validateStyle={false} to suppress warnings
+        provider={tileProvider}
+        center={center} // Control center via state
+        zoom={zoom} // Control zoom via state
+        dprs={[1, 2]} // For retina displays
       >
-        <NavigationControl position="top-right" />
+        <ZoomControl /> {/* Basic zoom control */}
         
         {/* Render trash bins */}
         {bins.map((bin) => (
           <Marker
             key={`bin-${bin.id}`}
-            longitude={bin.location[0]}
-            latitude={bin.location[1]}
-            color="#2563eb"  // blue-600
-            onClick={() => {
-              // TODO: Handle bin click
-            }}
+            anchor={[bin.location[1], bin.location[0]]} 
+            width={24}
+            color="#2563eb"
           />
         ))}
 
@@ -132,30 +152,31 @@ export default function MapCanvas({
         {reports.map((report) => (
           <Marker
             key={`report-${report.id}`}
-            longitude={report.location[0]}
-            latitude={report.location[1]}
-            color="#dc2626"  // red-600
-            onClick={() => {
-              // TODO: Handle report click
-            }}
+            anchor={[report.location[1], report.location[0]]}
+            width={24}
+            color="#dc2626"
           />
         ))}
 
         {/* Render user location if available with pulsing blue circle */}
-        {console.log('[MapCanvas Render] Checking userLocation for marker:', userLocation)}
         {userLocation && (
           <Marker
             key="user-location"
-            longitude={userLocation[0]}
-            latitude={userLocation[1]}
-            // Removed offsetLeft/offsetTop props
-            anchor="center" // Ensure the marker anchor is the center
+            anchor={userLocation} 
           >
-            {/* Apply centering styles via CSS transform */}
-            <div style={{ transform: 'translate(-50%, -50%)' }}> 
-              <div className="pulse-marker"></div>
-            </div>
+            {/* <UserLocationMarker anchor={userLocation} /> */}
           </Marker>
+        )}
+
+        {/* Render the active overlay */} 
+        {activeOverlay && (
+          <Overlay anchor={activeOverlay.anchor} offset={[0, 0]}> 
+             {/* We will put the Popups component here later */}
+             <div style={{ background: 'white', padding: '10px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+               Report ID: {activeOverlay.report.id}
+               <button onClick={() => setActiveOverlay(null)} style={{ marginLeft: '10px', border: 'none', background:'lightgray', cursor:'pointer' }}>X</button>
+             </div>
+          </Overlay>
         )}
       </Map>
     </div>
