@@ -76,6 +76,9 @@ export default function Map() {
         userLocation={location}
         loading={loading}
         showHeatmap={showHeatmap}
+        userId={userId}
+        onClean={(id) => { setCleanId(id); setCleanOpen(true); }}
+        onDelete={actions.del}
       />
 
       <FiltersPanel

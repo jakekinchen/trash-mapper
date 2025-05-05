@@ -12,23 +12,16 @@
 
 /* Custom gradient for backgrounds */
 .sage-gradient {
-  background: linear-gradient(135deg, #8FBC8F 0%, #6B8E6B 100%);
+  @apply bg-gradient-to-br from-sage-light to-sage;
 }
 
 /* Custom button styles */
 .sage-button {
-  background-color: #8FBC8F;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: bold;
-  transition: all 0.2s ease;
+  @apply bg-sage-light text-white px-4 py-2 rounded-lg font-bold transition-all duration-200;
 }
 
 .sage-button:hover {
-  background-color: #6B8E6B;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  @apply bg-sage transform -translate-y-0.5 shadow-lg;
 }
 
 /* Floating action buttons */

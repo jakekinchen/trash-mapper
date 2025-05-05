@@ -3,11 +3,14 @@
 // using either MapLibre GL JS or Deck.gl integrated with React.
 
 import React, { useState, useEffect } from 'react';
-import { Map, Marker, Point } from 'pigeon-maps';
+import { Map, Marker, Point, Overlay } from 'pigeon-maps';
 import { maptiler, osm } from 'pigeon-maps/providers';
 import type { Bounds } from 'pigeon-maps';
 import type { PollutionReport, TrashBin } from './types';
 import HeatmapOverlay from './HeatmapOverlay';
+import PollutionInfo from '@/components/pollution-info';
+import { Button } from '@/components/ui/button';
+import { Sparkles, Trash2 } from 'lucide-react';
 
 const INITIAL_CENTER: Point = [30.2672, -97.7431];
 const INITIAL_ZOOM = 12;
@@ -21,6 +24,9 @@ interface MapCanvasProps {
   userLocation: Point | null;
   loading: boolean;
   showHeatmap?: boolean;
+  userId?: string | null;
+  onClean?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export default function MapCanvas({
@@ -29,11 +35,16 @@ export default function MapCanvas({
   userLocation,
   loading,
   showHeatmap = false,
+  userId,
+  onClean,
+  onDelete
 }: MapCanvasProps) {
   const [center, setCenter] = useState<Point>(userLocation || INITIAL_CENTER);
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [initialLocationSet, setInitialLocationSet] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<PollutionReport | null>(null);
+  const [selectedMarkerCoords, setSelectedMarkerCoords] = useState<Point | null>(null);
 
   useEffect(() => {
     if (userLocation && !initialLocationSet) {
@@ -61,6 +72,16 @@ export default function MapCanvas({
     setCenter(center);
     setZoom(zoom);
     setBounds(newBounds);
+  };
+
+  const handleClosePopup = () => {
+    setSelectedReport(null);
+    setSelectedMarkerCoords(null);
+  };
+
+  const handleMarkerClick = (report: PollutionReport) => {
+    setSelectedReport(report);
+    setSelectedMarkerCoords([report.location[1], report.location[0]]);
   };
 
   return (
@@ -96,6 +117,7 @@ export default function MapCanvas({
         zoom={zoom}
         onBoundsChanged={handleBoundsChange}
         dprs={[1, 2]}
+        onClick={handleClosePopup}
       >
         {!showHeatmap && bins.map((bin) => (
           <Marker
@@ -112,6 +134,7 @@ export default function MapCanvas({
             anchor={[report.location[1], report.location[0]]}
             width={24}
             color="#dc2626"
+            onClick={() => handleMarkerClick(report)}
           />
         ))}
 
@@ -124,6 +147,55 @@ export default function MapCanvas({
           >
             <div className="pulse-marker"></div>
           </Marker>
+        )}
+
+        {selectedReport && selectedMarkerCoords && (
+          (() => {
+            const markerLat = selectedMarkerCoords[0];
+            const centerLat = center[0];
+            // If marker is in top half, show info box below (positive offset)
+            // If marker is in bottom half, show info box above (negative offset)
+            // Add extra offset to account for marker height (24px) and some padding
+            const yOffset = markerLat > centerLat ? 0 : 0;
+
+            return (
+              <Overlay anchor={selectedMarkerCoords} offset={[0, yOffset]}>
+                <div className="bg-white rounded-lg shadow-lg p-4 min-w-[240px] transform -translate-x-1/2">
+                  <PollutionInfo report={selectedReport} />
+                  <div className="flex gap-2 mt-4">
+                    {/* Show Clean only for reports not owned by the current user and not already cleaned */}
+                    {!selectedReport.cleaned_up && selectedReport.user_id !== userId && onClean && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-white border-0 bg-sage-light hover:bg-sage-light/75 hover:text-white"
+                        onClick={() => {
+                          onClean(selectedReport.id);
+                          handleClosePopup();
+                        }}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2 text-white hover:text-sage-light" />
+                        Clean
+                      </Button>
+                    )}
+                    {/* Show Delete only for owner's report */}
+                    {selectedReport.user_id === userId && onDelete && (
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={async () => {
+                          await onDelete(selectedReport.id);
+                          handleClosePopup();
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Overlay>
+            );
+          })()
         )}
       </Map>
 

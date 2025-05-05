@@ -21,7 +21,7 @@ const config = {
     extend: {
       colors: {
         sage: {
-          light: "#94A187",  // Light sage color
+          light: "#8FBC8F",  // Updated to match navbar color
           DEFAULT: "#7C8B70", // Darker sage color
         },
         border: "hsl(var(--border))",
