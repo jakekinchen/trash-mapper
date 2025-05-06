@@ -260,22 +260,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // // Trigger classification asynchronously
-    // fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reports/classify`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     reportId: inserted.id,
-    //     imageUrl: publicUrl,
-    //   }),
-    //   credentials: 'include', // Ensure user session is sent
-    // }).catch(error => {
-    //   console.error('Failed to trigger classification:', error);
-    //   // Don't fail the request, just log the error
-    // });
-
     // Update user stats
     try {
       // First check if user has stats record

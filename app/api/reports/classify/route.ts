@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the report with classification data
-    const { error: updateError, data: updateData } = await supabase
+    const { error: updateError } = await supabase
       .from('reports')
       .update({
         v1_classification_results: classificationData,
