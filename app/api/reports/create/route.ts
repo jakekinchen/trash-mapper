@@ -213,53 +213,6 @@ export async function POST(request: NextRequest) {
     // If validation passed, proceed with upload and insert
     console.log('OpenAI validation successful. Proceeding with upload and insert.');
 
-    // --- START: HuggingFace Image Classification ---
-    let classificationData = null;
-    const maxRetries = 2;
-    let retryCount = 0;
-    let lastError = null;
-
-    while (retryCount < maxRetries) {
-      try {
-        const base64Image = optimizedImageBuffer.toString('base64');
-        const response = await fetch(process.env.HUGGINGFACE_API_URL!, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ inputs: base64Image }),
-        });
-
-        if (response.status === 503) {
-          console.log('HuggingFace API is waking up, retrying in 5 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          retryCount++;
-          continue;
-        }
-
-        if (!response.ok) {
-          throw new Error(`HuggingFace API error: ${response.status} ${response.statusText}`);
-        }
-
-        classificationData = await response.json();
-        console.log('HuggingFace classification successful:', classificationData);
-        break;
-      } catch (error) {
-        lastError = error;
-        console.error(`HuggingFace classification attempt ${retryCount + 1} failed:`, error);
-        retryCount++;
-        if (retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-      }
-    }
-
-    if (!classificationData && lastError) {
-      console.warn('Skipping classification step due to API errors:', lastError);
-    }
-    // --- END: HuggingFace Image Classification ---
-
     // 1. upload optimized image
     const fileName = `${user.id}/${Date.now()}-${image.name.replace(/[^a-z0-9.]/gi, '_')}.webp`
     const { error: uploadError } = await supabase.storage
@@ -283,12 +236,12 @@ export async function POST(request: NextRequest) {
       .from('reports') // Ensure this table name is correct
       .insert({
         user_id: user.id,
-        geom: `POINT(${finalLon} ${finalLat})`,
+        geom: `POINT(${finalLat} ${finalLon})`,
         image_url: publicUrl,
         severity: userSeverity, // Use user severity for now, or use AI severity if parsed
         is_valid_environment: true, // Set to true since validation passed
         // cleaned_up: false, // TEST: remove this
-        v1_classification_results: classificationData, // Add the classification data
+        // v1_classification_results: classificationData, // changed to update later
       })
       .select('id')
       .single()
@@ -306,6 +259,21 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // Trigger classification asynchronously
+    fetch('/api/reports/classify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reportId: inserted.id,
+        imageUrl: publicUrl,
+      }),
+    }).catch(error => {
+      console.error('Failed to trigger classification:', error);
+      // Don't fail the request, just log the error
+    });
 
     // Update user stats
     try {
