@@ -89,13 +89,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the report with classification data
-    const { error: updateError } = await supabase
+    const { error: updateError, data: updateData } = await supabase
       .from('reports')
       .update({
         v1_classification_results: classificationData,
       })
       .eq('id', reportId)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .select();
 
     if (updateError) {
       console.error('Failed to update report with classification data:', updateError);
