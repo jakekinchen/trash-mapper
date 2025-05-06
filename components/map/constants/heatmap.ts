@@ -32,8 +32,8 @@ export const getColorForIntensity = (alpha: number): string => {
 // Constants for heatmap rendering
 export const HEATMAP_CONSTANTS = {
   BASE_INTENSITY: 1.2,
-  MIN_RADIUS: 10,
-  MAX_RADIUS: 30,
+  MIN_RADIUS: 40,
+  MAX_RADIUS: 70,
   ZOOM_RADIUS_FACTOR: 2,
   CANVAS_SIZE: 1000,
   OPACITY: 0.6

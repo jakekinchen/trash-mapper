@@ -18,7 +18,7 @@ export default function Map() {
   const [trashOn, setTrashOn] = useState(false);
   const [pollOn, setPollOn] = useState(true);
   const [show311, setShow311] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(true);
 
   /* UI state */
   const [reportOpen, setReportOpen] = useState(false);
