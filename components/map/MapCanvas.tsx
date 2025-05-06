@@ -165,7 +165,7 @@ export default function MapCanvas({
                   <PollutionInfo report={selectedReport} />
                   <div className="flex gap-2 mt-4">
                     {/* Show Clean only for reports not owned by the current user and not already cleaned */}
-                    {!selectedReport.cleaned_up && selectedReport.user_id !== userId && onClean && (
+                    {userId && !selectedReport.cleaned_up && selectedReport.user_id !== userId && onClean && (
                       <Button
                         variant="outline"
                         className="flex-1 text-white border-0 bg-sage-light hover:bg-sage-light/75 hover:text-white"

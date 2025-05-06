@@ -100,7 +100,13 @@ export function Navbar() {
                     </SheetClose>
                     <SheetClose asChild>
                       <Link href="/reports" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
-                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a4 4 0 118 0v2M12 11a4 4 0 100-8 4 4 0 000 8z" /></svg>
+                        <Image 
+                          src="/notebook.svg" 
+                          alt="Reports" 
+                          width={20} 
+                          height={20} 
+                          style={{ filter: 'invert(77%) sepia(32%) saturate(1151%) hue-rotate(339deg) brightness(101%) contrast(101%)' }}
+                        />
                         Reports
                       </Link>
                     </SheetClose>
@@ -110,16 +116,12 @@ export function Navbar() {
                         Events
                       </Link>
                     </SheetClose>
-                    {
-                      pathname !== '/' && (
-                        <SheetClose asChild>
-                          <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
-                            <Map className="w-5 h-5 text-blue-600" />
-                            Map
-                          </Link>
-                        </SheetClose>
-                      )
-                    }
+                    <SheetClose asChild>
+                      <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 hover:bg-primary/10 transition-colors font-medium text-base">
+                        <Map className="w-5 h-5 text-blue-600" />
+                        Map
+                      </Link>
+                    </SheetClose>
                     <FeedbackModal />
                   </nav>
                   <div className="my-6 border-t border-gray-200" />
