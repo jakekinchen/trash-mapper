@@ -81,7 +81,7 @@ export default function MapCanvas({
 
   const handleMarkerClick = (report: PollutionReport) => {
     setSelectedReport(report);
-    setSelectedMarkerCoords([report.location[1], report.location[0]]);
+    setSelectedMarkerCoords(report.location);
   };
 
   return (
@@ -132,7 +132,7 @@ export default function MapCanvas({
         {!showHeatmap && reports.map((report) => (
           <Marker
             key={`report-${report.id}`}
-            anchor={[report.location[1], report.location[0]]}
+            anchor={report.location}
             width={24}
             color="#dc2626"
             onClick={() => handleMarkerClick(report)}

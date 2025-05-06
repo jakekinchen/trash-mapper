@@ -33,7 +33,7 @@ export default function usePollutionData() {
             try {
               const geometry = wkx.Geometry.parse(Buffer.from(report.geom, 'hex')) as wkx.Point;
               if (geometry instanceof wkx.Point) {
-                coordinates = [geometry.x, geometry.y];
+                coordinates = [geometry.y, geometry.x]; // Swap x and y to get [longitude, latitude]
               }
             } catch (e) {
               console.error('Error parsing geom for report', report.id, e);
@@ -69,17 +69,27 @@ export default function usePollutionData() {
           .filter(report => {
             const lat = parseFloat(report.sr_location_lat);
             const lon = parseFloat(report.sr_location_long);
+            console.log('311 Report coordinates:', {
+              raw: { lat: report.sr_location_lat, lon: report.sr_location_long },
+              parsed: { lat, lon }
+            });
             return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
           })
-          .map((report) => ({
-            id: `311-${report.sr_created_date}-${report.sr_location_lat}-${report.sr_location_long}`,
-            location: [parseFloat(report.sr_location_long), parseFloat(report.sr_location_lat)],
-            type: "311",
-            severity: 3, // Default severity
-            timestamp: report.sr_created_date,
-            cleaned_up: false, // 311 reports are initially not cleaned
-            description: report.sr_type_desc
-          }));
+          .map((report) => {
+            const lat = parseFloat(report.sr_location_lat);
+            const lon = parseFloat(report.sr_location_long);
+            const location: [number, number] = [lat, lon];
+            console.log('311 Report mapped location:', location);
+            return {
+              id: `311-${report.sr_created_date}-${report.sr_location_lat}-${report.sr_location_long}`,
+              location,
+              type: "311",
+              severity: 3, // Default severity
+              timestamp: report.sr_created_date,
+              cleaned_up: false, // 311 reports are initially not cleaned
+              description: report.sr_type_desc
+            };
+          });
 
         // Combine both data sources
         const combined = [...userReports, ...new311Reports];

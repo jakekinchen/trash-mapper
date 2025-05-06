@@ -67,6 +67,17 @@ export default function useReportActions({ addReport, mutateReport, userId, open
       addReport(newReport);
       toast({ title: "Report Submitted", description: "Thank you!" });
       setTimeout(() => setSuccess(false), 1500); // Reset success state after delay
+      // Trigger classification from client
+      if (json.reportId && json.imageUrl) {
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reports/classify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reportId: json.reportId, imageUrl: json.imageUrl }),
+          credentials: 'include',
+        }).catch(err => {
+          console.error('Failed to trigger classification:', err);
+        });
+      }
       // Note: Closing the modal is handled by the component using the hook based on success state
 
     } catch (error) {
