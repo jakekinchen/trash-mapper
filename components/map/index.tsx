@@ -16,9 +16,10 @@ export default function Map() {
 
   /* layer toggles */
   const [trashOn, setTrashOn] = useState(false);
-  const [pollOn, setPollOn] = useState(true);
-  const [show311, setShow311] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showUserMarkers, setShowUserMarkers] = useState(false);
+  const [show311, setShow311] = useState(false);
+  const [showUserHeatmap, setShowUserHeatmap] = useState(true);
+  const [show311Heatmap, setShow311Heatmap] = useState(true);
 
   /* UI state */
   const [reportOpen, setReportOpen] = useState(false);
@@ -30,6 +31,19 @@ export default function Map() {
   const { reports, addReport, mutateReport } = usePollutionData();
   const { location, loading } = useUserLocation();
   const { userId } = useCurrentUser();
+
+  // Filter reports for markers
+  const visibleReports = reports.filter(r => {
+    if (r.type === '311') {
+      return show311; // Only show 311 reports if show311 is true
+    } else {
+      return showUserMarkers; // Only show user submitted reports if showUserMarkers is true
+    }
+  });
+
+  // Separate filtered datasets for heatmaps
+  const userHeatmapReports = reports.filter(r => r.type !== '311');
+  const heatmap311Reports = reports.filter(r => r.type === '311');
 
   /* actions hook */
   const actions = useReportActions({
@@ -72,10 +86,13 @@ export default function Map() {
     <div ref={mapContainerRef} className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
       <MapCanvas
         bins={trashOn ? bins : []}
-        reports={pollOn ? reports.filter(r => show311 || r.type !== '311') : []}
+        reports={visibleReports}
         userLocation={location}
         loading={loading}
-        showHeatmap={showHeatmap}
+        showUserHeatmap={showUserHeatmap}
+        show311Heatmap={show311Heatmap}
+        userHeatmapReports={userHeatmapReports}
+        heatmap311Reports={heatmap311Reports}
         userId={userId}
         onClean={(id) => { setCleanId(id); setCleanOpen(true); }}
         onDelete={actions.del}
@@ -84,12 +101,14 @@ export default function Map() {
       <FiltersPanel
         showTrashBins={trashOn}
         toggleTrashBins={setTrashOn}
-        showPollution={pollOn}
-        togglePollution={setPollOn}
+        showPollution={showUserMarkers}
+        togglePollution={setShowUserMarkers}
         show311={show311}
         toggle311={setShow311}
-        showHeatmap={showHeatmap}
-        toggleHeatmap={setShowHeatmap}
+        showUserHeatmap={showUserHeatmap}
+        toggleUserHeatmap={setShowUserHeatmap}
+        show311Heatmap={show311Heatmap}
+        toggle311Heatmap={setShow311Heatmap}
       />
 
       <ReportModal

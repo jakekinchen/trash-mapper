@@ -8,10 +8,11 @@ interface FiltersPanelProps {
   togglePollution: (value: boolean) => void;
   show311: boolean;
   toggle311: (value: boolean) => void;
-  showHeatmap: boolean;
-  toggleHeatmap: (value: boolean) => void;
-  // Add zoom levels if needed for disabling checkboxes
-  currentZoom?: number; // Assuming zoom is managed elsewhere now
+  showUserHeatmap: boolean;
+  toggleUserHeatmap: (value: boolean) => void;
+  show311Heatmap: boolean;
+  toggle311Heatmap: (value: boolean) => void;
+  currentZoom?: number;
 }
 
 export default function FiltersPanel({
@@ -21,9 +22,11 @@ export default function FiltersPanel({
   togglePollution,
   show311,
   toggle311,
-  showHeatmap,
-  toggleHeatmap,
-  currentZoom = 13, // Default zoom if not provided
+  showUserHeatmap,
+  toggleUserHeatmap,
+  show311Heatmap,
+  toggle311Heatmap,
+  currentZoom = 13,
 }: FiltersPanelProps) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -51,7 +54,7 @@ export default function FiltersPanel({
               onChange={(e) => togglePollution(e.target.checked)}
               className="form-checkbox h-4 w-4 text-red-600 accent-red-600"
               aria-label="Toggle user submitted litter layer"
-              disabled={currentZoom < pollutionZoomThreshold} // Disable based on zoom
+              disabled={currentZoom < pollutionZoomThreshold}
             />
             <span className={`text-sm font-medium ${currentZoom < pollutionZoomThreshold ? 'text-gray-400' : ''}`}>
               User Submitted Litter
@@ -65,7 +68,7 @@ export default function FiltersPanel({
               onChange={(e) => toggle311(e.target.checked)}
               className="form-checkbox h-4 w-4 text-blue-600 accent-blue-600"
               aria-label="Toggle 311 sourced litter layer"
-              disabled={currentZoom < pollutionZoomThreshold} // Disable based on zoom
+              disabled={currentZoom < pollutionZoomThreshold}
             />
             <span className={`text-sm font-medium ${currentZoom < pollutionZoomThreshold ? 'text-gray-400' : ''}`}>
               311 Sourced Litter
@@ -85,16 +88,29 @@ export default function FiltersPanel({
             </span>
           </label>
           <div className="border-t border-gray-200 my-2"></div>
+          <div className="text-sm font-medium text-gray-500 mb-1">Heatmap Layers</div>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={showHeatmap}
-              onChange={(e) => toggleHeatmap(e.target.checked)}
-              className="form-checkbox h-4 w-4 text-orange-600 accent-orange-600"
-              aria-label="Toggle heatmap view"
+              checked={showUserHeatmap}
+              onChange={(e) => toggleUserHeatmap(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-red-600 accent-red-600"
+              aria-label="Toggle user submitted heatmap"
             />
             <span className="text-sm font-medium">
-              Heatmap View
+              User Submitted Heatmap
+            </span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={show311Heatmap}
+              onChange={(e) => toggle311Heatmap(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-blue-600 accent-blue-600"
+              aria-label="Toggle 311 sourced heatmap"
+            />
+            <span className="text-sm font-medium">
+              311 Sourced Heatmap
             </span>
           </label>
         </div>
