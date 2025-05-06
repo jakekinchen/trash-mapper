@@ -33,7 +33,12 @@ function latLonToPixel(lat: number, lon: number, bounds: Bounds, canvasWidth: nu
 const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  console.log('[HeatmapOverlay] Rendering with props:', { numReports: reports.length, zoom, bounds });
+  console.log('[HeatmapOverlay] Component mounted/updated with props:', { 
+    numReports: reports.length, 
+    zoom, 
+    bounds,
+    canvasRef: canvasRef.current ? 'exists' : 'null'
+  });
 
   const radius = Math.max(
     HEATMAP_CONSTANTS.MIN_RADIUS,
@@ -49,7 +54,12 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
     
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
-    console.log('[HeatmapOverlay] Canvas dimensions:', { canvasWidth, canvasHeight });
+    console.log('[HeatmapOverlay] Starting draw with dimensions:', { 
+      canvasWidth, 
+      canvasHeight,
+      numReports: reports.length,
+      radius
+    });
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
         console.warn('[HeatmapOverlay] Canvas dimensions are invalid, skipping draw.');
@@ -68,12 +78,13 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
       return;
     }
 
-    console.log(`[HeatmapOverlay] Clearing canvas (${canvasWidth}x${canvasHeight}) and drawing ${reports.length} points with radius ${radius}`);
+    console.log('[HeatmapOverlay] bounds structure:', bounds);
+    console.log(`[HeatmapOverlay] Starting to draw ${reports.length} points with radius ${radius}`);
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     let pointsDrawn = 0;
     reports.forEach((report, index) => {
-      const [lon, lat] = report.location;
+      const [lat, lon] = report.location;
       const [x, y] = latLonToPixel(lat, lon, bounds, canvasWidth, canvasHeight);
 
       if (index < 5) {

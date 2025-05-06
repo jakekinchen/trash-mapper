@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Trash2 } from 'lucide-react';
 
 const INITIAL_CENTER: Point = [30.2672, -97.7431];
-const INITIAL_ZOOM = 12;
+const INITIAL_ZOOM = 11;
 
 const MAP_TILER_KEY = process.env.NEXT_PUBLIC_MAP_TILER_KEY as string | undefined;
 const tileProvider = MAP_TILER_KEY ? maptiler(MAP_TILER_KEY, 'streets') : osm;
@@ -49,7 +49,7 @@ export default function MapCanvas({
   useEffect(() => {
     if (userLocation && !initialLocationSet) {
       setCenter(userLocation);
-      setZoom(14);
+      setZoom(11);
       setInitialLocationSet(true);
     }
   }, [userLocation, initialLocationSet]);
@@ -109,6 +109,12 @@ export default function MapCanvas({
           height: 100%;
           pointer-events: none;
           z-index: 10;
+          background: transparent;
+        }
+        .heatmap-canvas-overlay canvas {
+          width: 100%;
+          height: 100%;
+          display: block;
         }
       `}</style>
       <Map
@@ -201,13 +207,23 @@ export default function MapCanvas({
       </Map>
 
       {showHeatmap && bounds && (
-        <div className="heatmap-canvas-overlay">
-          <HeatmapOverlay 
-            reports={reports} 
-            zoom={zoom} 
-            bounds={bounds}
-          />
-        </div>
+        (() => {
+          console.log('[MapCanvas] Rendering HeatmapOverlay with:', { 
+            numReports: reports.length, 
+            zoom, 
+            bounds,
+            showHeatmap 
+          });
+          return (
+            <div className="heatmap-canvas-overlay">
+              <HeatmapOverlay 
+                reports={reports} 
+                zoom={zoom} 
+                bounds={bounds}
+              />
+            </div>
+          );
+        })()
       )}
     </div>
   );

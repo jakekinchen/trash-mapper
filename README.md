@@ -21,7 +21,7 @@ Users can submit reports including an image of the litter, its location, and a s
 ## Technology Stack
 
 *   **Frontend:** Next.js, React, TypeScript, Tailwind CSS
-*   **Mapping:** Leaflet, React-Leaflet
+*   **Mapping:** Pigeon Maps
 *   **Backend:** Next.js API Routes
 *   **Database & Auth:** Supabase (PostgreSQL, Auth, Storage)
 *   **AI:** OpenAI API (GPT-4 Vision)
