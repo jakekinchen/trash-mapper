@@ -83,7 +83,7 @@ export default function Map() {
   }, []); // Run once on mount
 
   return (
-    <div ref={mapContainerRef} className="relative w-full h-[calc(100vh-4.5rem)]" id="map-component">
+    <div ref={mapContainerRef} className="relative w-full h-[calc(100vh-6rem)]" id="map-component">
       <MapCanvas
         bins={trashOn ? bins : []}
         reports={visibleReports}

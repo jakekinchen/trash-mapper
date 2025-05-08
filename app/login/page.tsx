@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
@@ -9,14 +9,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { AlertCircle } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [capsLockEnabled, setCapsLockEnabled] = useState<boolean>(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    setCapsLockEnabled(e.getModifierState('CapsLock'))
+  }
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -70,15 +76,24 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  required
+                  disabled={loading}
+                />
+                {capsLockEnabled && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-yellow-600 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Caps Lock</span>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
