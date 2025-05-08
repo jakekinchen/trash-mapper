@@ -66,7 +66,7 @@ export function Navbar() {
           <div className="bg-white/20 p-2 rounded-full flex items-center justify-center">
             <Image src="/temp-icon.png" alt="TrashMapperATX Logo" width={24} height={24} className="h-10 w-10 translate-y-0.5" />
           </div>
-          <span className="text-xl font-bold tracking-wide">Trash Mapper ATX</span>
+          <span className="text-xl font-bold tracking-wide">Trash Map ATX</span>
         </Link>
         <div className="flex items-center space-x-4">
           {loading ? (
