@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { User } from '@supabase/supabase-js'
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut, Map } from 'lucide-react'
+import { Menu, LogOut, Map, X } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -19,10 +19,16 @@ import {
 } from "@/components/ui/sheet"
 import { useDrawer } from '@/lib/drawer-context'
 import { FeedbackModal } from './feedback-modal'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showLoginPopup, setShowLoginPopup] = useState(true)
   const router = useRouter()
   const { isDrawerOpen, setIsDrawerOpen } = useDrawer()
 
@@ -132,12 +138,31 @@ export function Navbar() {
               </SheetContent>
             </Sheet>
           ) : (
-            <Link
-              href="/login"
-              className="flex items-center justify-center p-2 hover:opacity-80 transition-opacity"
-            >
-              <Image src="/login.svg" alt="Login" width={32} height={32} className="brightness-0 invert" />
-            </Link>
+            <Popover open={showLoginPopup}>
+              <PopoverTrigger asChild>
+                <Link
+                  href="/login"
+                  className="flex items-center justify-center p-2 hover:opacity-80 transition-opacity"
+                >
+                  <Image src="/login.svg" alt="Login" width={32} height={32} className="brightness-0 invert" />
+                </Link>
+              </PopoverTrigger>
+              <PopoverContent 
+                side="bottom" 
+                align="end"
+                className="w-64 bg-white text-gray-800 border border-gray-200 p-4"
+              >
+                <div className="flex justify-between items-start">
+                  <p className="text-sm px-2">Sign up or log in to report litter and clean up trash</p>
+                  <button 
+                    onClick={() => setShowLoginPopup(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
       </div>
