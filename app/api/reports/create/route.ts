@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from "openai";
 import { z } from "zod";
 import { createClient } from '@/lib/supabaseServer'
-import sharp from 'sharp';
 import { Buffer } from 'buffer';
 import exifParser from 'exif-parser';
+import { optimizeImage } from '@/lib/imageServer'
 
 const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
 
@@ -125,14 +125,8 @@ export async function POST(request: NextRequest) {
         console.log("Using Default coordinates for report.");
     }
 
-    // Optimize image using Sharp first
-    const optimizedImageBuffer = await sharp(imageBuffer)
-      .resize(768, 768, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .webp({ quality: 80 })
-      .toBuffer();
+    // Optimize image and ensure it's under 3MB
+    const optimizedImageBuffer = await optimizeImage(imageBuffer);
       
     // --- START: OpenAI Validation --- 
     let environmentValidationResult: EnvironmentValidationResult;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
-import sharp from 'sharp';
 import { Buffer } from 'buffer';
+import { optimizeImage } from '@/lib/imageServer'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -29,14 +29,8 @@ export async function POST(request: NextRequest) {
 
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
-    // Optimize image using Sharp
-    const optimizedImageBuffer = await sharp(imageBuffer)
-      .resize(768, 768, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .webp({ quality: 80 })
-      .toBuffer();
+    // Optimize image and ensure it's under 3MB
+    const optimizedImageBuffer = await optimizeImage(imageBuffer);
 
     // --- START: HuggingFace Image Classification ---
     let classificationData = null;

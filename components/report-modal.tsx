@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Camera, Upload, X, Check, Loader2, AlertCircle } from "lucide-react"
 import Webcam from "react-webcam"
+import { compressImageFile } from "@/lib/imageClient"
 
 // Define AND EXPORT a more specific type for the submitted data
 export interface ReportSubmitData {
@@ -63,7 +64,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
     }
   }
 
-  const captureImage = () => {
+  const captureImage = async () => {
     if (onClearValidationError) onClearValidationError();
     try {
       if (webcamRef.current) {
@@ -71,13 +72,11 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
         if (imageSrc) {
           setImage(imageSrc)
           setIsCapturing(false) // <-- Hide camera and show preview after capture
-          // Convert base64 to file
-          fetch(imageSrc)
-            .then(res => res.blob())
-            .then(blob => {
-              const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
-              setImageFile(file)
-            })
+          // Convert base64 to file and compress
+          const blob = await fetch(imageSrc).then(res => res.blob())
+          const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
+          const compressed = await compressImageFile(file)
+          setImageFile(compressed)
         }
       }
     } catch (error) {
@@ -85,12 +84,13 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onClearValidationError) onClearValidationError();
     try {
       const file = e.target.files?.[0]
       if (file) {
-        setImageFile(file); // Store the file object
+        const compressed = await compressImageFile(file)
+        setImageFile(compressed); // Store the compressed file
         const reader = new FileReader()
         reader.onload = (event) => {
           if (event.target?.result) {
@@ -100,7 +100,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
         reader.onerror = () => {
           console.error("Error reading file")
         }
-        reader.readAsDataURL(file)
+        reader.readAsDataURL(compressed)
       }
     } catch (error) {
       console.error("Error uploading file:", error)
