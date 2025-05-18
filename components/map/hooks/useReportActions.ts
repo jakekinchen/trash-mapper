@@ -23,7 +23,7 @@ export default function useReportActions({ addReport, mutateReport, userId, open
       return;
     }
     // Default location if loc is null
-    const [lon, lat] = loc ?? [-97.7431, 30.2672]; 
+    const [lat, lon] = loc ?? [30.2672, -97.7431];
     const fd = new FormData();
     fd.append("latitude", lat.toString());
     fd.append("longitude", lon.toString());
@@ -55,7 +55,7 @@ export default function useReportActions({ addReport, mutateReport, userId, open
       setSuccess(true);
       const newReport: PollutionReport = {
         id: json.reportId,
-        location: [lon, lat],
+        location: [lat, lon],
         type: "user",
         severity: data.severity,
         description: data.description,

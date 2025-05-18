@@ -116,7 +116,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
       }
       
       const submitData: ReportSubmitData = {
-        location: userLocation || [-97.7431, 30.2672],
+        location: userLocation || [30.2672, -97.7431],
         description,
         severity: severity[0],
         imageFile: imageFile,
@@ -271,7 +271,7 @@ export default function ReportModal({ isOpen, onClose, onSubmit, userLocation, i
 
           {userLocation ? (
             <div className="text-sm text-muted-foreground">
-              Location: {userLocation[1].toFixed(6)}, {userLocation[0].toFixed(6)}
+              Location: {userLocation[0].toFixed(6)}, {userLocation[1].toFixed(6)}
             </div>
           ) : (
             <div className="text-sm text-amber-500">
