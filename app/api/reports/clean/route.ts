@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
-import sharp from 'sharp';
 import { Buffer } from 'buffer';
+import { optimizeImage } from '@/lib/imageServer'
 
 // Define points awarded for cleaning
 const POINTS_FOR_CLEANING = 25;
@@ -39,15 +39,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optimize image
+    // Optimize image and ensure it's under 3MB
     const imageBuffer = Buffer.from(await image.arrayBuffer());
-    const optimizedImageBuffer = await sharp(imageBuffer)
-      .resize(768, 768, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .webp({ quality: 80 })
-      .toBuffer();
+    const optimizedImageBuffer = await optimizeImage(imageBuffer);
 
     // 1. Upload optimized "cleaned" image
     // Use a slightly different naming convention or path
