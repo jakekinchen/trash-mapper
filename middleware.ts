@@ -2,6 +2,14 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Block common WordPress probing paths that do not exist in this project
+  const pathname = request.nextUrl.pathname
+  if (pathname.startsWith('/wp-admin') ||
+      pathname.startsWith('/wordpress/wp-admin') ||
+      pathname.startsWith('/wp-login') ||
+      pathname.startsWith('/wordpress/wp-login')) {
+    return new NextResponse('Not Found', { status: 404 })
+  }
   let response = NextResponse.next({
     request: {
       headers: request.headers,
