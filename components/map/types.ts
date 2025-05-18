@@ -2,7 +2,7 @@
 
 export interface TrashBin {
   id: string;
-  location: [number, number]; // [longitude, latitude]
+  location: [number, number]; // [latitude, longitude]
   name?: string;
   capacity?: string;
   lastEmptied?: string;
@@ -46,7 +46,7 @@ export interface SupabaseReport {
 // Represents the processed pollution report used in the frontend map state
 export interface PollutionReport {
   id: string;
-  location: [number, number]; // [longitude, latitude]
+  location: [number, number]; // [latitude, longitude]
   type: "user" | "311" | "historical"; // Added historical based on old map.tsx
   severity: number; // 1-5
   description?: string;
