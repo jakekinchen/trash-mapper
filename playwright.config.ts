@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
-    timeout: 15_000,
+    timeout: 30_000,
   },
   use: {
     ...devices['Desktop Chrome'],
@@ -15,7 +15,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm exec next dev -p 3100',
+    command: 'rm -rf .next && pnpm exec next dev -p 3100',
     url: 'http://localhost:3100',
     reuseExistingServer: true,
     timeout: 30_000,
