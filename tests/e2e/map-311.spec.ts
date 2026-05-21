@@ -56,9 +56,9 @@ test('renders Austin 311 pollution hotspots on the map', async ({ page }) => {
 
   await page.goto('/');
 
-  await expect(page.getByTestId('skyfi-panel')).toBeVisible();
-  await expect(page.getByText('SkyFi Intelligence')).toBeVisible();
-  await expect(page.getByTestId('skyfi-panel').getByText('AOI-01')).toBeVisible();
+  await expect(page.getByTestId('aoi-panel')).toBeVisible();
+  await expect(page.getByText('Priority AOIs')).toBeVisible();
+  await expect(page.getByTestId('aoi-panel').getByText('AOI-01')).toBeVisible();
 
   const filtersButton = page.getByRole('button', { name: 'Filters' });
   await expect(filtersButton).toBeVisible();
@@ -66,7 +66,7 @@ test('renders Austin 311 pollution hotspots on the map', async ({ page }) => {
 
   await expect(page.getByText(/311 Sourced Heatmap \([1-9][0-9]*/)).toBeVisible();
   await expect(page.getByTestId('austin-311-heatmap')).toBeVisible();
-  await expect(page.getByTestId('skyfi-aoi-overlay')).toBeVisible();
+  await expect(page.getByTestId('aoi-overlay')).toBeVisible();
 
   await expect.poll(async () => {
     return page.getByTestId('austin-311-heatmap').evaluate((canvas) => {
@@ -86,5 +86,5 @@ test('renders Austin 311 pollution hotspots on the map', async ({ page }) => {
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export AOIs' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('trashmapatx-skyfi-aois.geojson');
+  expect(download.suggestedFilename()).toBe('trashmapatx-priority-aois.geojson');
 });

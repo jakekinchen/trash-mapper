@@ -12,22 +12,33 @@ export default function Home() {
   const hasCheckedSession = useRef(false)
 
   useEffect(() => {
+    let cancelled = false;
+    const finishLoading = () => {
+      if (cancelled) return;
+      setLoading(false);
+      hasCheckedSession.current = true;
+    };
+
     if (hasCheckedSession.current) {
-      setLoading(false)
+      finishLoading()
       return
     }
     if (!isSupabaseConfigured) {
-      hasCheckedSession.current = true
-      setLoading(false)
+      finishLoading()
       return
     }
-    supabase.auth.getSession().then(() => {
-      setLoading(false)
-      hasCheckedSession.current = true
-    }).catch(() => {
-      setLoading(false)
-      hasCheckedSession.current = true
-    })
+
+    const timeout = new Promise((resolve) => {
+      window.setTimeout(resolve, 2500);
+    });
+
+    Promise.race([supabase.auth.getSession(), timeout])
+      .then(finishLoading)
+      .catch(finishLoading);
+
+    return () => {
+      cancelled = true;
+    };
   }, [])
 
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>

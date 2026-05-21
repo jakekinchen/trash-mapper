@@ -263,11 +263,15 @@ export async function POST(request: NextRequest) {
     // Update user stats
     try {
       // First check if user has stats record
-      const { data: existingStats } = await supabase
+      const { data: existingStats, error: statsFetchError } = await supabase
         .from('user_stats')
-        .select('id')
+        .select('id, reports_submitted, points')
         .eq('user_id', user.id)
         .single();
+
+      if (statsFetchError && statsFetchError.code !== 'PGRST116') {
+        throw statsFetchError;
+      }
 
       if (!existingStats) {
         // Create initial stats record
@@ -288,8 +292,8 @@ export async function POST(request: NextRequest) {
         const { error: statsUpdateError } = await supabase
           .from('user_stats')
           .update({
-            reports_submitted: supabase.rpc('increment_counter', { row_id: existingStats.id, counter_name: 'reports_submitted', increment_by: 1 }),
-            points: supabase.rpc('increment_counter', { row_id: existingStats.id, counter_name: 'points', increment_by: 10 })
+            reports_submitted: (existingStats.reports_submitted || 0) + 1,
+            points: (existingStats.points || 0) + 10,
           })
           .eq('user_id', user.id);
 

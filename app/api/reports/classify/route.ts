@@ -82,21 +82,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the report with classification data
-    const { error: updateError } = await supabase
-      .from('reports')
-      .update({
-        v1_classification_results: classificationData,
-      })
-      .eq('id', reportId)
-      .eq('user_id', user.id)
-      .select();
+    // Update the report with classification data. The RPC keeps direct report
+    // updates scoped to report owners without granting broad table UPDATE access.
+    const { data: updatedRows, error: updateError } = await supabase
+      .rpc('set_report_classification', {
+        p_report_id: reportId,
+        p_classification_results: classificationData,
+      });
 
-    if (updateError) {
+    if (updateError || !updatedRows?.length) {
       console.error('Failed to update report with classification data:', updateError);
       return NextResponse.json(
-        { error: 'Failed to update report', details: updateError.message },
-        { status: 500 },
+        {
+          error: 'Failed to update report',
+          details: updateError?.message || 'Report not found or user not authorized.',
+        },
+        { status: updateError ? 500 : 404 },
       );
     }
 
@@ -112,4 +113,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-} 
+}

@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import MapCanvas   from "./MapCanvas";
 import FiltersPanel from "./FiltersPanel";
-import SkyFiInsightsPanel from "./SkyFiInsightsPanel";
+import AoiInsightsPanel from "./AoiInsightsPanel";
 import ReportModal, { type ReportSubmitData } from "@/components/report-modal";
 import CleanModal   from "@/components/clean-modal";
-import { buildSkyFiInsights } from "./skyfiInsights";
+import { buildAoiInsights } from "./aoiInsights";
 import useTrashBins      from "./hooks/useTrashBins";
 import usePollutionData  from "./hooks/usePollutionData";
 import useUserLocation   from "./hooks/useUserLocation";
@@ -47,7 +47,7 @@ export default function Map() {
   // Separate filtered datasets for heatmaps
   const userHeatmapReports = reports.filter(r => r.type !== '311');
   const heatmap311Reports = reports.filter(r => r.type === '311');
-  const skyFiInsights = useMemo(() => buildSkyFiInsights(reports), [reports]);
+  const aoiInsights = useMemo(() => buildAoiInsights(reports), [reports]);
 
   /* actions hook */
   const actions = useReportActions({
@@ -97,7 +97,7 @@ export default function Map() {
         show311Heatmap={show311Heatmap}
         userHeatmapReports={userHeatmapReports}
         heatmap311Reports={heatmap311Reports}
-        skyFiZones={skyFiInsights.zones}
+        aoiZones={aoiInsights.zones}
         onViewportChange={setCurrentZoom}
         userId={userId}
         onClean={(id) => { setCleanId(id); setCleanOpen(true); }}
@@ -124,8 +124,8 @@ export default function Map() {
         austin311LookbackDays={status.austin311LookbackDays}
       />
 
-      <SkyFiInsightsPanel
-        summary={skyFiInsights}
+      <AoiInsightsPanel
+        summary={aoiInsights}
         loading={status.loading}
         error={status.austin311Error}
       />

@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
 
+const REPORT_IMAGES_BUCKET = 'report-images';
+
+function getStoragePathFromPublicUrl(imageUrl: string) {
+  const marker = `/storage/v1/object/public/${REPORT_IMAGES_BUCKET}/`;
+  const [, path] = imageUrl.split(marker);
+  return path ? decodeURIComponent(path) : null;
+}
+
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,14 +46,11 @@ export async function DELETE(request: NextRequest) {
     // 2. Delete the associated image from storage, if it exists
     if (reportData.image_url) {
       try {
-        // Assuming URL format: https://<project-ref>.supabase.co/storage/v1/object/public/images/<path/to/image.jpg>
-        // We need the part after 'images/' which is '<path/to/image.jpg>'
-        const imageUrlParts = reportData.image_url.split('/images/');
-        if (imageUrlParts.length > 1) {
-          const imagePath = imageUrlParts[1];
+        const imagePath = getStoragePathFromPublicUrl(reportData.image_url);
+        if (imagePath) {
           console.log(`Attempting to delete image: ${imagePath} for report ${reportId}`);
           const { error: imageDeleteError } = await supabase.storage
-            .from('images') // Ensure this is your bucket name
+            .from(REPORT_IMAGES_BUCKET)
             .remove([imagePath]);
 
           if (imageDeleteError) {

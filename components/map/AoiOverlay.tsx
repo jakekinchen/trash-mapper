@@ -1,9 +1,9 @@
 import type { Bounds } from "pigeon-maps";
-import type { SkyFiHotspotZone } from "./skyfiInsights";
+import type { AoiHotspotZone } from "./aoiInsights";
 
 interface AoiOverlayProps {
   bounds: Bounds;
-  zones: SkyFiHotspotZone[];
+  zones: AoiHotspotZone[];
 }
 
 function latLonToPixel(lat: number, lon: number, bounds: Bounds, width: number, height: number): [number, number] {
@@ -22,7 +22,7 @@ function latLonToPixel(lat: number, lon: number, bounds: Bounds, width: number, 
 export default function AoiOverlay({ bounds, zones }: AoiOverlayProps) {
   return (
     <svg
-      data-testid="skyfi-aoi-overlay"
+      data-testid="aoi-overlay"
       className="absolute inset-0 z-20 h-full w-full pointer-events-none"
       viewBox="0 0 1000 1000"
       preserveAspectRatio="none"

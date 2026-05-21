@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +16,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
   const handleSignUp = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -24,6 +26,9 @@ export default function SignUpPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
     })
 
     setLoading(false)
@@ -37,10 +42,16 @@ export default function SignUpPage() {
       })
     } else {
       console.log('Sign up successful', data)
-      toast({
-        title: "Sign Up Successful",
-        description: "Please check your email to confirm your account.",
-      })
+      if (data.session) {
+        toast({ title: "Account Created", description: "Redirecting..." })
+        router.push('/')
+        router.refresh()
+      } else {
+        toast({
+          title: "Sign Up Successful",
+          description: "Please check your email to confirm your account.",
+        })
+      }
     }
   }
 

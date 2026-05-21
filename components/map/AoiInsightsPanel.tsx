@@ -2,10 +2,10 @@
 
 import { Download, Radar, Satellite, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createSkyFiAoiGeoJson, type SkyFiInsightSummary } from "./skyfiInsights";
+import { createAoiGeoJson, type AoiInsightSummary } from "./aoiInsights";
 
-interface SkyFiInsightsPanelProps {
-  summary: SkyFiInsightSummary;
+interface AoiInsightsPanelProps {
+  summary: AoiInsightSummary;
   loading?: boolean;
   error?: string;
 }
@@ -24,21 +24,21 @@ function formatCoordinate([lat, lon]: [number, number]) {
   return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 }
 
-export default function SkyFiInsightsPanel({ summary, loading = false, error }: SkyFiInsightsPanelProps) {
+export default function AoiInsightsPanel({ summary, loading = false, error }: AoiInsightsPanelProps) {
   const handleDownload = () => {
-    const geoJson = createSkyFiAoiGeoJson(summary.zones);
+    const geoJson = createAoiGeoJson(summary.zones);
     const blob = new Blob([JSON.stringify(geoJson, null, 2)], { type: "application/geo+json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "trashmapatx-skyfi-aois.geojson";
+    link.download = "trashmapatx-priority-aois.geojson";
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <section
-      data-testid="skyfi-panel"
+      data-testid="aoi-panel"
       className="absolute bottom-4 right-4 z-30 w-[min(24rem,calc(100vw-2rem))] rounded-md border border-slate-200 bg-white/95 shadow-lg backdrop-blur"
     >
       <div className="border-b border-slate-200 p-3">
@@ -48,8 +48,8 @@ export default function SkyFiInsightsPanel({ summary, loading = false, error }: 
               <Satellite className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">SkyFi Intelligence</h2>
-              <p className="text-xs text-slate-500">Satellite-ready 311 AOIs</p>
+              <h2 className="text-sm font-semibold text-slate-950">Priority AOIs</h2>
+              <p className="text-xs text-slate-500">Imagery-ready cleanup zones</p>
             </div>
           </div>
           <Button

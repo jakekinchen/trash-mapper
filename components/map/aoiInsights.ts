@@ -1,6 +1,6 @@
 import type { PollutionReport } from "./types";
 
-export interface SkyFiHotspotZone {
+export interface AoiHotspotZone {
   id: string;
   label: string;
   center: [number, number];
@@ -19,12 +19,12 @@ export interface SkyFiHotspotZone {
   recommendation: string;
 }
 
-export interface SkyFiInsightSummary {
+export interface AoiInsightSummary {
   total311Reports: number;
   open311Reports: number;
   topCategory: string;
   latestTimestamp?: string;
-  zones: SkyFiHotspotZone[];
+  zones: AoiHotspotZone[];
 }
 
 const GRID_SIZE_DEGREES = 0.018;
@@ -44,7 +44,7 @@ function getGridKey([lat, lon]: [number, number]) {
   return `${latKey}:${lonKey}`;
 }
 
-function getAreaKm2(zone: SkyFiHotspotZone["bbox"]) {
+function getAreaKm2(zone: AoiHotspotZone["bbox"]) {
   const centerLat = (zone.north + zone.south) / 2;
   const latKm = Math.abs(zone.north - zone.south) * 110.574;
   const lonKm = Math.abs(zone.east - zone.west) * 111.32 * Math.cos(centerLat * Math.PI / 180);
@@ -58,7 +58,7 @@ function getRecommendation(reportCount: number, openCount: number, areaKm2: numb
   return "Archive search is likely enough for baseline verification.";
 }
 
-export function buildSkyFiInsights(reports: PollutionReport[], maxZones = 4): SkyFiInsightSummary {
+export function buildAoiInsights(reports: PollutionReport[], maxZones = 4): AoiInsightSummary {
   const reports311 = reports.filter((report) => report.type === "311");
   const groups = new Map<string, PollutionReport[]>();
 
@@ -111,7 +111,7 @@ export function buildSkyFiInsights(reports: PollutionReport[], maxZones = 4): Sk
     .slice(0, maxZones)
     .map((zone, index) => ({
       ...zone,
-      id: `skyfi-aoi-${index + 1}`,
+      id: `priority-aoi-${index + 1}`,
       label: formatZoneLabel(index),
     }));
 
@@ -132,10 +132,10 @@ export function buildSkyFiInsights(reports: PollutionReport[], maxZones = 4): Sk
   };
 }
 
-export function createSkyFiAoiGeoJson(zones: SkyFiHotspotZone[]) {
+export function createAoiGeoJson(zones: AoiHotspotZone[]) {
   return {
     type: "FeatureCollection",
-    name: "trashmapatx-skyfi-aois",
+    name: "trashmapatx-priority-aois",
     features: zones.map((zone) => ({
       type: "Feature",
       properties: {
