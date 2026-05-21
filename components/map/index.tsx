@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"; // Added useRef
+import { useState, useEffect, useMemo, useRef } from "react";
 import MapCanvas   from "./MapCanvas";
 import FiltersPanel from "./FiltersPanel";
+import SkyFiInsightsPanel from "./SkyFiInsightsPanel";
 import ReportModal, { type ReportSubmitData } from "@/components/report-modal";
 import CleanModal   from "@/components/clean-modal";
+import { buildSkyFiInsights } from "./skyfiInsights";
 import useTrashBins      from "./hooks/useTrashBins";
 import usePollutionData  from "./hooks/usePollutionData";
 import useUserLocation   from "./hooks/useUserLocation";
@@ -45,6 +47,7 @@ export default function Map() {
   // Separate filtered datasets for heatmaps
   const userHeatmapReports = reports.filter(r => r.type !== '311');
   const heatmap311Reports = reports.filter(r => r.type === '311');
+  const skyFiInsights = useMemo(() => buildSkyFiInsights(reports), [reports]);
 
   /* actions hook */
   const actions = useReportActions({
@@ -94,6 +97,7 @@ export default function Map() {
         show311Heatmap={show311Heatmap}
         userHeatmapReports={userHeatmapReports}
         heatmap311Reports={heatmap311Reports}
+        skyFiZones={skyFiInsights.zones}
         onViewportChange={setCurrentZoom}
         userId={userId}
         onClean={(id) => { setCleanId(id); setCleanOpen(true); }}
@@ -118,6 +122,12 @@ export default function Map() {
         userReportError={status.userReportError}
         austin311Error={status.austin311Error}
         austin311LookbackDays={status.austin311LookbackDays}
+      />
+
+      <SkyFiInsightsPanel
+        summary={skyFiInsights}
+        loading={status.loading}
+        error={status.austin311Error}
       />
 
       <ReportModal

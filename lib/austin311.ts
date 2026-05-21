@@ -1,6 +1,8 @@
 import type { PollutionReport } from "@/components/map/types";
 
 const AUSTIN_311_ENDPOINT = "https://data.austintexas.gov/resource/xwdj-i9he.json";
+const AUSTIN_311_MAX_ATTEMPTS = 3;
+const AUSTIN_311_TIMEOUT_MS = 20_000;
 
 const AUSTIN_BOUNDS = {
   minLat: 29.95,
@@ -53,6 +55,10 @@ export interface Austin311FetchResult {
 
 function socrataString(value: string) {
   return `'${value.replace(/'/g, "''")}'`;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function buildAustin311Query(now = new Date(), lookbackDays = 90, limit = 1000) {
@@ -135,22 +141,52 @@ export function mapAustin311Reports(reports: Austin311ServiceRequest[], lookback
   };
 }
 
+async function fetchAustin311Json(url: string): Promise<Austin311ServiceRequest[]> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= AUSTIN_311_MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AUSTIN_311_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+        },
+        next: { revalidate: 15 * 60 },
+        signal: controller.signal,
+      });
+
+      if (response.ok) {
+        return await response.json() as Austin311ServiceRequest[];
+      }
+
+      const body = await response.text();
+      lastError = new Error(`Austin 311 request failed with ${response.status}: ${body.slice(0, 200)}`);
+
+      if (response.status < 500 || attempt === AUSTIN_311_MAX_ATTEMPTS) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === AUSTIN_311_MAX_ATTEMPTS) {
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    await wait(400 * attempt);
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Austin 311 request failed");
+}
+
 export async function fetchAustin311PollutionReports(): Promise<Austin311FetchResult> {
   const lookbackDays = 90;
   const query = buildAustin311Query(new Date(), lookbackDays);
   const url = `${AUSTIN_311_ENDPOINT}?$query=${encodeURIComponent(query)}`;
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-    },
-    next: { revalidate: 15 * 60 },
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Austin 311 request failed with ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await response.json() as Austin311ServiceRequest[];
+  const data = await fetchAustin311Json(url);
   return mapAustin311Reports(data, lookbackDays);
 }

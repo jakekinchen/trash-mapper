@@ -1,4 +1,6 @@
 const endpoint = "https://data.austintexas.gov/resource/xwdj-i9he.json";
+const maxAttempts = 3;
+const timeoutMs = 20_000;
 
 const serviceTypes = [
   "ARR - Street Sweeping",
@@ -24,23 +26,54 @@ const since = new Date(now);
 since.setDate(now.getDate() - 90);
 
 const query = [
-  "SELECT sr_number, sr_type_desc, sr_created_date, sr_location_lat, sr_location_long, sr_location_lat_long",
+  "SELECT sr_number, sr_type_desc, sr_status_desc, sr_created_date, sr_closed_date, sr_location_lat, sr_location_long, sr_location_lat_long",
   `WHERE sr_type_desc in (${serviceTypes.map(quote).join(",")})`,
   `AND sr_created_date >= ${quote(since.toISOString().split(".")[0])} :: floating_timestamp`,
   `AND sr_created_date <= ${quote(now.toISOString().split(".")[0])} :: floating_timestamp`,
   "ORDER BY sr_created_date DESC",
-  "LIMIT 25",
+  "LIMIT 1000",
 ].join(" ");
 
-const response = await fetch(`${endpoint}?$query=${encodeURIComponent(query)}`, {
-  headers: { Accept: "application/json" },
-});
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-if (!response.ok) {
-  throw new Error(`Austin 311 verification failed: ${response.status} ${await response.text()}`);
+async function fetchReportsWithRetry() {
+  const url = `${endpoint}?$query=${encodeURIComponent(query)}`;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+
+      if (response.ok) {
+        return response.json();
+      }
+
+      lastError = new Error(`Austin 311 verification failed: ${response.status} ${await response.text()}`);
+      if (response.status < 500 || attempt === maxAttempts) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts) {
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    await wait(400 * attempt);
+  }
+
+  throw lastError;
 }
 
-const reports = await response.json();
+const reports = await fetchReportsWithRetry();
 if (!Array.isArray(reports) || reports.length === 0) {
   throw new Error("Austin 311 verification returned no pollution reports");
 }

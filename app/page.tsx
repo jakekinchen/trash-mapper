@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { isSupabaseConfigured } from "@/lib/supabaseClient"
 
 export default function Home() {
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(isSupabaseConfigured)
   const hasCheckedSession = useRef(false)
 
   useEffect(() => {

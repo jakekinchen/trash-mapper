@@ -8,6 +8,8 @@ import { maptiler, osm } from 'pigeon-maps/providers';
 import type { Bounds } from 'pigeon-maps';
 import type { PollutionReport, TrashBin } from './types';
 import HeatmapOverlay from './HeatmapOverlay';
+import AoiOverlay from './AoiOverlay';
+import type { SkyFiHotspotZone } from './skyfiInsights';
 import PollutionInfo from '@/components/pollution-info';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Trash2 } from 'lucide-react';
@@ -27,6 +29,7 @@ interface MapCanvasProps {
   show311Heatmap?: boolean;
   userHeatmapReports: PollutionReport[];
   heatmap311Reports: PollutionReport[];
+  skyFiZones?: SkyFiHotspotZone[];
   onViewportChange?: (zoom: number) => void;
   userId?: string | null;
   onClean?: (id: string) => void;
@@ -42,6 +45,7 @@ export default function MapCanvas({
   show311Heatmap = false,
   userHeatmapReports,
   heatmap311Reports,
+  skyFiZones = [],
   onViewportChange,
   userId,
   onClean,
@@ -234,6 +238,10 @@ export default function MapCanvas({
             testId="austin-311-heatmap"
           />
         </div>
+      )}
+
+      {bounds && skyFiZones.length > 0 && (
+        <AoiOverlay bounds={bounds} zones={skyFiZones} />
       )}
     </div>
   );
