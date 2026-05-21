@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { isSupabaseConfigured, supabase } from './supabaseClient';
 
 // Define the Report type based on expected Supabase data
 interface Report {
@@ -13,6 +13,10 @@ interface Report {
 }
 
 export async function getMyReports() {
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase is not configured.');
+  }
+
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.user) {
     throw new Error('User not authenticated.');
@@ -38,6 +42,10 @@ export async function getMyReports() {
 }
 
 export async function getAllPollutionReports() {
+  if (!isSupabaseConfigured) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('reports')
     .select('*')
@@ -49,4 +57,4 @@ export async function getAllPollutionReports() {
   }
 
   return data;
-} 
+}

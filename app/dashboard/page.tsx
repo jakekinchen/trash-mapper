@@ -1,7 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabaseServer' // Import the server client utility
+import { createClient, isSupabaseServerConfigured } from '@/lib/supabaseServer' // Import the server client utility
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
+  if (!isSupabaseServerConfigured) {
+    redirect('/login')
+  }
+
   const supabase = await createClient() // Use the server client factory
 
   const { data, error } = await supabase.auth.getUser()
@@ -20,4 +26,4 @@ export default async function DashboardPage() {
       <p>(Fetched on the server)</p>
     </div>
   )
-} 
+}

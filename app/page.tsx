@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { MobileOptimizations } from "@/components/mobile-optimizations"
 import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { isSupabaseConfigured } from "@/lib/supabaseClient"
 
 export default function Home() {
   const [loading, setLoading] = useState(true)
@@ -15,7 +16,15 @@ export default function Home() {
       setLoading(false)
       return
     }
+    if (!isSupabaseConfigured) {
+      hasCheckedSession.current = true
+      setLoading(false)
+      return
+    }
     supabase.auth.getSession().then(() => {
+      setLoading(false)
+      hasCheckedSession.current = true
+    }).catch(() => {
       setLoading(false)
       hasCheckedSession.current = true
     })

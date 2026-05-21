@@ -20,6 +20,7 @@ export default function Map() {
   const [show311, setShow311] = useState(false);
   const [showUserHeatmap, setShowUserHeatmap] = useState(true);
   const [show311Heatmap, setShow311Heatmap] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(11);
 
   /* UI state */
   const [reportOpen, setReportOpen] = useState(false);
@@ -28,7 +29,7 @@ export default function Map() {
 
   /* data hooks */
   const { bins } = useTrashBins();
-  const { reports, addReport, mutateReport } = usePollutionData();
+  const { reports, addReport, mutateReport, status } = usePollutionData();
   const { location, loading } = useUserLocation();
   const { userId } = useCurrentUser();
 
@@ -93,6 +94,7 @@ export default function Map() {
         show311Heatmap={show311Heatmap}
         userHeatmapReports={userHeatmapReports}
         heatmap311Reports={heatmap311Reports}
+        onViewportChange={setCurrentZoom}
         userId={userId}
         onClean={(id) => { setCleanId(id); setCleanOpen(true); }}
         onDelete={actions.del}
@@ -109,13 +111,20 @@ export default function Map() {
         toggleUserHeatmap={setShowUserHeatmap}
         show311Heatmap={show311Heatmap}
         toggle311Heatmap={setShow311Heatmap}
+        currentZoom={currentZoom}
+        userReportCount={userHeatmapReports.length}
+        austin311ReportCount={heatmap311Reports.length}
+        loading={status.loading}
+        userReportError={status.userReportError}
+        austin311Error={status.austin311Error}
+        austin311LookbackDays={status.austin311LookbackDays}
       />
 
       <ReportModal
         isOpen={reportOpen}
         onClose={()=>setReportOpen(false)}
         onSubmit={(d: ReportSubmitData)=>actions.submit(d,location)} // <-- Add type to d
-        userLocation={location} 
+        userLocation={location}
         isSubmitting={actions.submitting}
         isSuccess={actions.success}
         validationError={actions.validationError}
@@ -128,11 +137,11 @@ export default function Map() {
         onClose={() => { setCleanOpen(false); setCleanId(null); }}
         onConfirm={actions.clean} // Pass the clean action
       />
-      
+
       {/* FloatingButtons component should be rendered somewhere, likely in the main layout or here */}
       {/* Make sure FloatingButtons is actually included in your component tree */}
 
       {/* Removed Leaflet script tags - map lib loaded by MapCanvas */}
     </div>
   );
-} 
+}

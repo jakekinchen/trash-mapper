@@ -1,5 +1,5 @@
 // Placeholder for MapCanvas.tsx
-// This component will contain the actual map rendering logic 
+// This component will contain the actual map rendering logic
 // using either MapLibre GL JS or Deck.gl integrated with React.
 
 import React, { useState, useEffect } from 'react';
@@ -27,6 +27,7 @@ interface MapCanvasProps {
   show311Heatmap?: boolean;
   userHeatmapReports: PollutionReport[];
   heatmap311Reports: PollutionReport[];
+  onViewportChange?: (zoom: number) => void;
   userId?: string | null;
   onClean?: (id: string) => void;
   onDelete?: (id: string) => Promise<void>;
@@ -41,6 +42,7 @@ export default function MapCanvas({
   show311Heatmap = false,
   userHeatmapReports,
   heatmap311Reports,
+  onViewportChange,
   userId,
   onClean,
   onDelete
@@ -74,10 +76,10 @@ export default function MapCanvas({
     bounds: Bounds;
     initial: boolean;
   }) => {
-    console.log('[MapCanvas] onBoundsChanged', { center, zoom, newBounds });
     setCenter(center);
     setZoom(zoom);
     setBounds(newBounds);
+    onViewportChange?.(zoom);
   };
 
   const handleClosePopup = () => {
@@ -127,7 +129,7 @@ export default function MapCanvas({
         provider={tileProvider}
         center={center}
         zoom={zoom}
-        zoomSnap={false} 
+        zoomSnap={false}
         onBoundsChanged={handleBoundsChange}
         dprs={[1, 2]}
         onClick={handleClosePopup}
@@ -213,44 +215,26 @@ export default function MapCanvas({
       </Map>
 
       {showUserHeatmap && bounds && (
-        (() => {
-          console.log('[MapCanvas] Rendering User HeatmapOverlay with:', { 
-            numReports: userHeatmapReports.length, 
-            zoom, 
-            bounds,
-            showUserHeatmap 
-          });
-          return (
-            <div className="heatmap-canvas-overlay">
-              <HeatmapOverlay 
-                reports={userHeatmapReports} 
-                zoom={zoom} 
-                bounds={bounds}
-              />
-            </div>
-          );
-        })()
+        <div className="heatmap-canvas-overlay">
+          <HeatmapOverlay
+            reports={userHeatmapReports}
+            zoom={zoom}
+            bounds={bounds}
+            testId="user-heatmap"
+          />
+        </div>
       )}
 
       {show311Heatmap && bounds && (
-        (() => {
-          console.log('[MapCanvas] Rendering 311 HeatmapOverlay with:', { 
-            numReports: heatmap311Reports.length, 
-            zoom, 
-            bounds,
-            show311Heatmap 
-          });
-          return (
-            <div className="heatmap-canvas-overlay">
-              <HeatmapOverlay 
-                reports={heatmap311Reports} 
-                zoom={zoom} 
-                bounds={bounds}
-              />
-            </div>
-          );
-        })()
+        <div className="heatmap-canvas-overlay">
+          <HeatmapOverlay
+            reports={heatmap311Reports}
+            zoom={zoom}
+            bounds={bounds}
+            testId="austin-311-heatmap"
+          />
+        </div>
       )}
     </div>
   );
-} 
+}

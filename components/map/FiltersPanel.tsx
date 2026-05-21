@@ -13,6 +13,12 @@ interface FiltersPanelProps {
   show311Heatmap: boolean;
   toggle311Heatmap: (value: boolean) => void;
   currentZoom?: number;
+  userReportCount?: number;
+  austin311ReportCount?: number;
+  loading?: boolean;
+  userReportError?: string;
+  austin311Error?: string;
+  austin311LookbackDays?: number;
 }
 
 export default function FiltersPanel({
@@ -27,6 +33,12 @@ export default function FiltersPanel({
   show311Heatmap,
   toggle311Heatmap,
   currentZoom = 13,
+  userReportCount = 0,
+  austin311ReportCount = 0,
+  loading = false,
+  userReportError,
+  austin311Error,
+  austin311LookbackDays,
 }: FiltersPanelProps) {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -98,7 +110,7 @@ export default function FiltersPanel({
               aria-label="Toggle user submitted heatmap"
             />
             <span className="text-sm font-medium">
-              User Submitted Heatmap
+              User Submitted Heatmap ({userReportCount})
             </span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -110,12 +122,23 @@ export default function FiltersPanel({
               aria-label="Toggle 311 sourced heatmap"
             />
             <span className="text-sm font-medium">
-              311 Sourced Heatmap
+              311 Sourced Heatmap ({austin311ReportCount})
             </span>
           </label>
+          <div className="border-t border-gray-200 pt-2 text-xs text-gray-500">
+            {loading ? "Loading map data..." : (
+              <>
+                <div>
+                  311 window: last {austin311LookbackDays ?? 90} days
+                </div>
+                {userReportError && <div className="text-amber-700">{userReportError}</div>}
+                {austin311Error && <div className="text-red-700">{austin311Error}</div>}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
- 
+

@@ -12,6 +12,7 @@ interface HeatmapOverlayProps {
   reports: PollutionReport[];
   zoom: number;
   bounds: Bounds;
+  testId?: string;
 }
 
 function latLonToPixel(lat: number, lon: number, bounds: Bounds, canvasWidth: number, canvasHeight: number): [number, number] {
@@ -24,21 +25,14 @@ function latLonToPixel(lat: number, lon: number, bounds: Bounds, canvasWidth: nu
   }
 
   const x = ((lon - sw[1]) / lonRange) * canvasWidth;
-  
+
   const y = ((ne[0] - lat) / latRange) * canvasHeight;
 
   return [x, y];
 }
 
-const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
+const HeatmapOverlay = ({ reports, zoom, bounds, testId }: HeatmapOverlayProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  console.log('[HeatmapOverlay] Component mounted/updated with props:', { 
-    numReports: reports.length, 
-    zoom, 
-    bounds,
-    canvasRef: canvasRef.current ? 'exists' : 'null'
-  });
 
   const radius = Math.max(
     HEATMAP_CONSTANTS.MIN_RADIUS,
@@ -48,59 +42,44 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
   const drawHeatmap = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
-      console.error('[HeatmapOverlay] Canvas ref not found');
       return;
     }
-    
+
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
-    console.log('[HeatmapOverlay] Starting draw with dimensions:', { 
-      canvasWidth, 
-      canvasHeight,
-      numReports: reports.length,
-      radius
-    });
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
-        console.warn('[HeatmapOverlay] Canvas dimensions are invalid, skipping draw.');
         return;
     }
 
-    if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
-        console.log('[HeatmapOverlay] Resizing canvas internal resolution:', { width: canvasWidth, height: canvasHeight });
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const scaledWidth = Math.round(canvasWidth * pixelRatio);
+    const scaledHeight = Math.round(canvasHeight * pixelRatio);
+
+    if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
+        canvas.width = scaledWidth;
+        canvas.height = scaledHeight;
     }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      console.error('[HeatmapOverlay] Failed to get 2D context');
       return;
     }
 
-    console.log('[HeatmapOverlay] bounds structure:', bounds);
-    console.log(`[HeatmapOverlay] Starting to draw ${reports.length} points with radius ${radius}`);
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    let pointsDrawn = 0;
-    reports.forEach((report, index) => {
+    reports.forEach((report) => {
       const [lat, lon] = report.location;
       const [x, y] = latLonToPixel(lat, lon, bounds, canvasWidth, canvasHeight);
 
-      if (index < 5) {
-          console.log(`[HeatmapOverlay] Report ${index}: lon=${lon}, lat=${lat} -> x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
-      }
-
       if (x < 0 || y < 0 || x > canvasWidth || y > canvasHeight) {
-          if (index < 5) {
-              console.log(`[HeatmapOverlay] Report ${index} is outside canvas bounds.`);
-          }
           return;
       }
 
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
       const pointIntensity = HEATMAP_CONSTANTS.BASE_INTENSITY * severityToIntensity(report.severity);
-      
+
       gradient.addColorStop(0, `rgba(255, 0, 0, ${pointIntensity})`);
       gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
 
@@ -108,14 +87,11 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
-      pointsDrawn++;
     });
-    console.log(`[HeatmapOverlay] Finished drawing loop. Points drawn within bounds: ${pointsDrawn}`);
 
     try {
-      const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+      const imageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight);
       const data = imageData.data;
-      let pixelsColored = 0;
       for (let i = 0; i < data.length; i += 4) {
         const alpha = data[i + 3] / 255;
         if (alpha > 0) {
@@ -124,10 +100,8 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
           data[i] = r;
           data[i + 1] = g;
           data[i + 2] = b;
-          pixelsColored++;
         }
       }
-      console.log(`[HeatmapOverlay] Applying color mapping. Pixels colored: ${pixelsColored}`);
       ctx.putImageData(imageData, 0, 0);
     } catch (e) {
         console.error('[HeatmapOverlay] Error during color mapping (getImageData/putImageData): ', e);
@@ -135,17 +109,20 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
   }, [reports, radius, bounds]);
 
   useEffect(() => {
-    if (!bounds) {
-        console.log('[HeatmapOverlay] useEffect skipped: bounds not ready.');
-        return;
-    }
-    console.log('[HeatmapOverlay] useEffect triggering drawHeatmap');
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const resizeObserver = new ResizeObserver(() => drawHeatmap());
+    resizeObserver.observe(canvas);
     drawHeatmap();
+
+    return () => resizeObserver.disconnect();
   }, [drawHeatmap, bounds]);
 
   return (
     <canvas
       ref={canvasRef}
+      data-testid={testId}
       style={{
         width: '100%',
         height: '100%',
@@ -157,4 +134,4 @@ const HeatmapOverlay = ({ reports, zoom, bounds }: HeatmapOverlayProps) => {
   );
 };
 
-export default HeatmapOverlay; 
+export default HeatmapOverlay;

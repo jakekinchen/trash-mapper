@@ -6,7 +6,13 @@ import { Buffer } from 'buffer';
 import exifParser from 'exif-parser';
 import { optimizeImage } from '@/lib/imageServer'
 
-const openai = new OpenAI(); // Assumes OPENAI_API_KEY is set in environment
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Define the type based on the Zod schema and usage
 interface EnvironmentValidationResult {
@@ -135,7 +141,7 @@ export async function POST(request: NextRequest) {
       const dataUrl = `data:image/webp;base64,${base64Image}`;
 
       console.log('Sending image to OpenAI for validation...');
-      const resp = await openai.chat.completions.create({
+      const resp = await getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini', // Or gpt-4-vision-preview or gpt-4o
         messages: [
           { 
@@ -230,7 +236,7 @@ export async function POST(request: NextRequest) {
       .from('reports') // Ensure this table name is correct
       .insert({
         user_id: user.id,
-        geom: `POINT(${finalLat} ${finalLon})`,
+        geom: `POINT(${finalLon} ${finalLat})`,
         image_url: publicUrl,
         severity: userSeverity, // Use user severity for now, or use AI severity if parsed
         is_valid_environment: true, // Set to true since validation passed
